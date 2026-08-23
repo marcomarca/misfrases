@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Frases - Gestor de Snippets</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar / Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">F</div>
+        <div class="brand-info">
+          <h2>Mis Frases</h2>
+          <span class="badge beta-badge">Beta V1</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="snippets">
+          <span class="icon">📝</span> Mis Frases
+        </button>
+        <button class="nav-item" data-tab="reorder">
+          <span class="icon">↕️</span> Reordenar Slots
+        </button>
+        <button class="nav-item" data-tab="stats">
+          <span class="icon">📊</span> Estadísticas
+        </button>
+        <button class="nav-item" data-tab="settings">
+          <span class="icon">⚙️</span> Configuración
+        </button>
+      </nav>
+
+      <div class="sidebar-status">
+        <div class="status-indicator ready" id="status-indicator"></div>
+        <span id="status-text">Hotkeys activos</span>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Snippets View -->
+      <section id="tab-snippets" class="tab-pane active">
+        <header class="view-header">
+          <div class="header-titles">
+            <h1>Mis Frases y Snippets</h1>
+            <p>Gestiona tus atajos de teclado y expansiones automáticas</p>
+          </div>
+          <button class="btn btn-primary" id="btn-new-snippet">
+            <span>+</span> Nueva Frase
+          </button>
+        </header>
+
+        <div class="toolbar">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Buscar por título, atajo o contenido...">
+          </div>
+          <div class="filter-group">
+            <select id="filter-group-select">
+              <option value="all">Todos los atajos</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table" id="snippets-table">
+            <thead>
+              <tr>
+                <th style="width: 70px;">Slot</th>
+                <th style="width: 140px;">Atajo</th>
+                <th>Título</th>
+                <th>Vista previa</th>
+                <th style="width: 90px; text-align: center;">Usos</th>
+                <th style="width: 80px; text-align: center;">Estado</th>
+                <th style="width: 130px; text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="snippets-tbody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+          <div id="snippets-empty" class="empty-state hidden">
+            <div class="empty-icon">📂</div>
+            <h3>No hay frases registradas</h3>
+            <p>Crea tu primera frase para empezar a expandir texto con atajos de teclado.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reorder Slots View -->
+      <section id="tab-reorder" class="tab-pane">
+        <header class="view-header">
+          <div class="header-titles">
+            <h1>Reordenamiento Manual de Slots</h1>
+            <p>Ajusta el número de slot (1..10) asignado a cada frase dentro de un atajo</p>
+          </div>
+        </header>
+
+        <div class="reorder-selector-bar">
+          <label for="reorder-hotkey-select">Selecciona el atajo a reordenar:</label>
+          <select id="reorder-hotkey-select"></select>
+        </div>
+
+        <div class="reorder-container">
+          <div class="reorder-list" id="reorder-list">
+            <!-- Rendered via JS -->
+          </div>
+          <div class="reorder-actions">
+            <button class="btn btn-primary" id="btn-save-reorder">Guardar nuevo orden</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Statistics View -->
+      <section id="tab-stats" class="tab-pane">
+        <header class="view-header">
+          <div class="header-titles">
+            <h1>Estadísticas de Uso</h1>
+            <p>Métricas históricas de expansión despachadas con éxito</p>
+          </div>
+        </header>
+
+        <div class="stats-cards">
+          <div class="stat-card">
+            <span class="stat-label">Total Expansiones</span>
+            <span class="stat-value" id="stat-total">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Hoy</span>
+            <span class="stat-value" id="stat-today">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Últimos 7 días</span>
+            <span class="stat-value" id="stat-7d">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Últimos 30 días</span>
+            <span class="stat-value" id="stat-30d">0</span>
+          </div>
+        </div>
+
+        <div class="section-title">
+          <h3>Rendimiento por Frase</h3>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Título</th>
+                <th>Atajo</th>
+                <th>Slot</th>
+                <th style="text-align: right;">Total</th>
+                <th style="text-align: right;">7 días</th>
+                <th style="text-align: right;">30 días</th>
+                <th style="text-align: right;">Último uso</th>
+              </tr>
+            </thead>
+            <tbody id="stats-tbody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Settings View -->
+      <section id="tab-settings" class="tab-pane">
+        <header class="view-header">
+          <div class="header-titles">
+            <h1>Configuración</h1>
+            <p>Preferencias del sistema y comportamiento de la aplicación</p>
+          </div>
+        </header>
+
+        <div class="settings-list">
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>Iniciar con Windows</h4>
+              <p>Arranca la aplicación automáticamente al iniciar sesión en el equipo.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-launch-at-login">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>Modo Administrador</h4>
+              <p>Permite inyectar texto en aplicaciones que se ejecutan elevadas (UIPI).</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-admin-mode">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>Hotkeys activos</h4>
+              <p>Pausa o reanuda globalmente la captura y expansión de atajos.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-hotkeys-enabled">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>Iniciar minimizado en la bandeja</h4>
+              <p>No abre la ventana principal en el arranque; permanece en segundo plano.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-start-hidden">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Create / Edit Modal -->
+  <div class="modal-backdrop hidden" id="snippet-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-title">Nueva Frase</h3>
+        <button class="modal-close" id="btn-close-modal">&times;</button>
+      </div>
+      <form id="snippet-form">
+        <input type="hidden" id="form-snippet-id">
+
+        <div class="form-group">
+          <label for="form-title">Título <span class="required">*</span></label>
+          <input type="text" id="form-title" maxlength="120" placeholder="Ej: Corregir redacción" required>
+        </div>
+
+        <div class="form-group">
+          <label>Atajo de teclado (Hotkey) <span class="required">*</span></label>
+          <div class="hotkey-recorder-container">
+            <div class="hotkey-display" id="hotkey-display">Control+Alt+P</div>
+            <button type="button" class="btn btn-secondary" id="btn-record-hotkey">Grabar atajo</button>
+          </div>
+          <input type="hidden" id="form-accelerator" value="Control+Alt+P" required>
+          <span class="form-hint" id="hotkey-feedback">Pulsa "Grabar atajo" y luego presiona la combinación deseada.</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-slot">Slot (1..10)</label>
+            <select id="form-slot">
+              <option value="">Auto (primer slot libre)</option>
+              <option value="1">Slot 1 (Tecla 1)</option>
+              <option value="2">Slot 2 (Tecla 2)</option>
+              <option value="3">Slot 3 (Tecla 3)</option>
+              <option value="4">Slot 4 (Tecla 4)</option>
+              <option value="5">Slot 5 (Tecla 5)</option>
+              <option value="6">Slot 6 (Tecla 6)</option>
+              <option value="7">Slot 7 (Tecla 7)</option>
+              <option value="8">Slot 8 (Tecla 8)</option>
+              <option value="9">Slot 9 (Tecla 9)</option>
+              <option value="10">Slot 10 (Tecla 0)</option>
+            </select>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" id="form-enabled" checked>
+              Frase activa
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="form-content">Contenido a expandir <span class="required">*</span></label>
+          <textarea id="form-content" rows="6" placeholder="Escribe aquí el texto completo o prompt que será insertado..." required></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-snippet">Guardar Frase</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

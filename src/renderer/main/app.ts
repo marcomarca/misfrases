@@ -1,0 +1,586 @@
+import type { AppApi } from '../../preload/preload';
+import type { AppSettings, Snippet, SnippetStats, StatsSummary } from '../../shared/types';
+
+declare global {
+  interface Window {
+    appApi: AppApi;
+  }
+}
+
+class MainApp {
+  private snippets: Snippet[] = [];
+  private currentTab = 'snippets';
+  private isRecordingHotkey = false;
+
+  // DOM elements
+  private navButtons!: NodeListOf<HTMLButtonElement>;
+  private tabPanes!: NodeListOf<HTMLElement>;
+  private snippetsTbody!: HTMLElement;
+  private snippetsEmpty!: HTMLElement;
+  private searchInput!: HTMLInputElement;
+  private filterGroupSelect!: HTMLSelectElement;
+
+  // Modal elements
+  private modal!: HTMLElement;
+  private modalTitle!: HTMLElement;
+  private snippetForm!: HTMLFormElement;
+  private formSnippetId!: HTMLInputElement;
+  private formTitle!: HTMLInputElement;
+  private formContent!: HTMLTextAreaElement;
+  private formAccelerator!: HTMLInputElement;
+  private formSlot!: HTMLSelectElement;
+  private formEnabled!: HTMLInputElement;
+  private hotkeyDisplay!: HTMLElement;
+  private hotkeyFeedback!: HTMLElement;
+  private btnRecordHotkey!: HTMLButtonElement;
+
+  // Reorder elements
+  private reorderHotkeySelect!: HTMLSelectElement;
+  private reorderList!: HTMLElement;
+  private btnSaveReorder!: HTMLButtonElement;
+  private reorderItemsState: Snippet[] = [];
+
+  // Stats elements
+  private statTotal!: HTMLElement;
+  private statToday!: HTMLElement;
+  private stat7d!: HTMLElement;
+  private stat30d!: HTMLElement;
+  private statsTbody!: HTMLElement;
+
+  // Settings elements
+  private settingLaunchAtLogin!: HTMLInputElement;
+  private settingAdminMode!: HTMLInputElement;
+  private settingHotkeysEnabled!: HTMLInputElement;
+  private settingStartHidden!: HTMLInputElement;
+  private statusIndicator!: HTMLElement;
+  private statusText!: HTMLElement;
+
+  constructor() {
+    this.initDOMElements();
+    this.initEventListeners();
+    this.loadInitialData();
+  }
+
+  private initDOMElements(): void {
+    this.navButtons = document.querySelectorAll('.nav-item');
+    this.tabPanes = document.querySelectorAll('.tab-pane');
+    this.snippetsTbody = document.getElementById('snippets-tbody')!;
+    this.snippetsEmpty = document.getElementById('snippets-empty')!;
+    this.searchInput = document.getElementById('search-input') as HTMLInputElement;
+    this.filterGroupSelect = document.getElementById('filter-group-select') as HTMLSelectElement;
+
+    this.modal = document.getElementById('snippet-modal')!;
+    this.modalTitle = document.getElementById('modal-title')!;
+    this.snippetForm = document.getElementById('snippet-form') as HTMLFormElement;
+    this.formSnippetId = document.getElementById('form-snippet-id') as HTMLInputElement;
+    this.formTitle = document.getElementById('form-title') as HTMLInputElement;
+    this.formContent = document.getElementById('form-content') as HTMLTextAreaElement;
+    this.formAccelerator = document.getElementById('form-accelerator') as HTMLInputElement;
+    this.formSlot = document.getElementById('form-slot') as HTMLSelectElement;
+    this.formEnabled = document.getElementById('form-enabled') as HTMLInputElement;
+    this.hotkeyDisplay = document.getElementById('hotkey-display')!;
+    this.hotkeyFeedback = document.getElementById('hotkey-feedback')!;
+    this.btnRecordHotkey = document.getElementById('btn-record-hotkey') as HTMLButtonElement;
+
+    this.reorderHotkeySelect = document.getElementById('reorder-hotkey-select') as HTMLSelectElement;
+    this.reorderList = document.getElementById('reorder-list')!;
+    this.btnSaveReorder = document.getElementById('btn-save-reorder') as HTMLButtonElement;
+
+    this.statTotal = document.getElementById('stat-total')!;
+    this.statToday = document.getElementById('stat-today')!;
+    this.stat7d = document.getElementById('stat-7d')!;
+    this.stat30d = document.getElementById('stat-30d')!;
+    this.statsTbody = document.getElementById('stats-tbody')!;
+
+    this.settingLaunchAtLogin = document.getElementById('setting-launch-at-login') as HTMLInputElement;
+    this.settingAdminMode = document.getElementById('setting-admin-mode') as HTMLInputElement;
+    this.settingHotkeysEnabled = document.getElementById('setting-hotkeys-enabled') as HTMLInputElement;
+    this.settingStartHidden = document.getElementById('setting-start-hidden') as HTMLInputElement;
+    this.statusIndicator = document.getElementById('status-indicator')!;
+    this.statusText = document.getElementById('status-text')!;
+  }
+
+  private initEventListeners(): void {
+    // Navigation
+    this.navButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        if (tab) {
+          this.switchTab(tab);
+        }
+      });
+    });
+
+    // Tray navigation subscription
+    window.appApi.onNavigateTab((tab) => {
+      this.switchTab(tab);
+    });
+
+    // Snippets Toolbar
+    document.getElementById('btn-new-snippet')?.addEventListener('click', () => this.openCreateModal());
+    this.searchInput?.addEventListener('input', () => this.renderSnippets());
+    this.filterGroupSelect?.addEventListener('change', () => this.renderSnippets());
+
+    // Modal
+    document.getElementById('btn-close-modal')?.addEventListener('click', () => this.closeModal());
+    document.getElementById('btn-cancel-modal')?.addEventListener('click', () => this.closeModal());
+    this.snippetForm?.addEventListener('submit', (e) => this.handleSaveSnippet(e));
+
+    // Hotkey recorder
+    this.btnRecordHotkey?.addEventListener('click', () => this.startRecordingHotkey());
+    window.addEventListener('keydown', (e) => this.handleKeyDown(e));
+
+    // Reorder
+    this.reorderHotkeySelect?.addEventListener('change', () => this.handleReorderHotkeyChange());
+    this.btnSaveReorder?.addEventListener('click', () => this.handleSaveReorder());
+
+    // Settings switches
+    this.settingLaunchAtLogin?.addEventListener('change', () => {
+      window.appApi.settings.update({ launchAtLogin: this.settingLaunchAtLogin.checked });
+    });
+    this.settingAdminMode?.addEventListener('change', () => {
+      window.appApi.settings.update({ administratorMode: this.settingAdminMode.checked });
+    });
+    this.settingHotkeysEnabled?.addEventListener('change', () => {
+      const enabled = this.settingHotkeysEnabled.checked;
+      window.appApi.settings.update({ hotkeysEnabled: enabled });
+      this.updateStatusBadge(enabled);
+    });
+    this.settingStartHidden?.addEventListener('change', () => {
+      window.appApi.settings.update({ startHidden: this.settingStartHidden.checked });
+    });
+  }
+
+  private switchTab(tab: string): void {
+    this.currentTab = tab;
+    this.navButtons.forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    this.tabPanes.forEach((pane) => {
+      pane.classList.toggle('active', pane.id === `tab-${tab}`);
+    });
+
+    if (tab === 'snippets') {
+      this.loadSnippets();
+    } else if (tab === 'reorder') {
+      this.loadReorderView();
+    } else if (tab === 'stats') {
+      this.loadStats();
+    } else if (tab === 'settings') {
+      this.loadSettings();
+    }
+  }
+
+  private async loadInitialData(): Promise<void> {
+    await this.loadSettings();
+    await this.loadSnippets();
+  }
+
+  // SNIPPETS
+  public async loadSnippets(): Promise<void> {
+    this.snippets = await window.appApi.snippets.list();
+    this.populateFilterSelect();
+    this.renderSnippets();
+  }
+
+  private populateFilterSelect(): void {
+    const accelerators = Array.from(new Set(this.snippets.map((s) => s.accelerator).filter(Boolean)));
+    const currentVal = this.filterGroupSelect.value;
+
+    this.filterGroupSelect.innerHTML = '<option value="all">Todos los atajos</option>';
+    for (const acc of accelerators) {
+      const opt = document.createElement('option');
+      opt.value = acc as string;
+      opt.textContent = acc as string;
+      this.filterGroupSelect.appendChild(opt);
+    }
+
+    if (accelerators.includes(currentVal)) {
+      this.filterGroupSelect.value = currentVal;
+    }
+  }
+
+  private renderSnippets(): void {
+    const query = this.searchInput.value.toLowerCase().trim();
+    const filterGroup = this.filterGroupSelect.value;
+
+    const filtered = this.snippets.filter((s) => {
+      const matchQuery =
+        !query ||
+        s.title.toLowerCase().includes(query) ||
+        s.content.toLowerCase().includes(query) ||
+        (s.accelerator && s.accelerator.toLowerCase().includes(query));
+
+      const matchGroup = filterGroup === 'all' || s.accelerator === filterGroup;
+
+      return matchQuery && matchGroup;
+    });
+
+    this.snippetsTbody.innerHTML = '';
+
+    if (filtered.length === 0) {
+      this.snippetsEmpty.classList.remove('hidden');
+      return;
+    }
+
+    this.snippetsEmpty.classList.add('hidden');
+
+    for (const snippet of filtered) {
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td><span class="slot-badge">${snippet.slot === 10 ? '0' : snippet.slot}</span></td>
+        <td><span class="hotkey-tag">${snippet.accelerator || '-'}</span></td>
+        <td><strong>${this.escapeHtml(snippet.title)}</strong></td>
+        <td><div class="content-preview">${this.escapeHtml(snippet.content)}</div></td>
+        <td style="text-align: center;">${snippet.usageCount.toLocaleString()}</td>
+        <td style="text-align: center;">
+          <label class="switch" style="transform: scale(0.75);">
+            <input type="checkbox" ${snippet.enabled ? 'checked' : ''} data-toggle-id="${snippet.id}">
+            <span class="slider"></span>
+          </label>
+        </td>
+        <td>
+          <div class="actions-cell">
+            <button class="btn-icon" data-edit-id="${snippet.id}" title="Editar">✏️</button>
+            <button class="btn-icon" data-duplicate-id="${snippet.id}" title="Duplicar">📋</button>
+            <button class="btn-icon danger" data-delete-id="${snippet.id}" title="Eliminar">🗑️</button>
+          </div>
+        </td>
+      `;
+
+      this.snippetsTbody.appendChild(tr);
+    }
+
+    // Attach row events
+    this.snippetsTbody.querySelectorAll('[data-toggle-id]').forEach((el) => {
+      el.addEventListener('change', async (e) => {
+        const id = (e.target as HTMLElement).getAttribute('data-toggle-id')!;
+        const checked = (e.target as HTMLInputElement).checked;
+        await window.appApi.snippets.update({ id, enabled: checked });
+        await this.loadSnippets();
+      });
+    });
+
+    this.snippetsTbody.querySelectorAll('[data-edit-id]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const id = el.getAttribute('data-edit-id')!;
+        this.openEditModal(id);
+      });
+    });
+
+    this.snippetsTbody.querySelectorAll('[data-duplicate-id]').forEach((el) => {
+      el.addEventListener('click', async () => {
+        const id = el.getAttribute('data-duplicate-id')!;
+        await window.appApi.snippets.duplicate(id);
+        await this.loadSnippets();
+      });
+    });
+
+    this.snippetsTbody.querySelectorAll('[data-delete-id]').forEach((el) => {
+      el.addEventListener('click', async () => {
+        const id = el.getAttribute('data-delete-id')!;
+        if (confirm('¿Deseas eliminar esta frase?')) {
+          await window.appApi.snippets.remove(id);
+          await this.loadSnippets();
+        }
+      });
+    });
+  }
+
+  // MODAL
+  private openCreateModal(): void {
+    this.modalTitle.textContent = 'Nueva Frase';
+    this.formSnippetId.value = '';
+    this.formTitle.value = '';
+    this.formContent.value = '';
+    this.formAccelerator.value = 'Control+Alt+P';
+    this.hotkeyDisplay.textContent = 'Control+Alt+P';
+    this.formSlot.value = '';
+    this.formEnabled.checked = true;
+    this.hotkeyFeedback.textContent = 'Pulsa "Grabar atajo" y luego presiona la combinación deseada.';
+    this.hotkeyFeedback.className = 'form-hint';
+    this.modal.classList.remove('hidden');
+    this.formTitle.focus();
+  }
+
+  private async openEditModal(id: string): Promise<void> {
+    const snippet = await window.appApi.snippets.getById(id);
+    if (!snippet) return;
+
+    this.modalTitle.textContent = 'Editar Frase';
+    this.formSnippetId.value = snippet.id;
+    this.formTitle.value = snippet.title;
+    this.formContent.value = snippet.content;
+    this.formAccelerator.value = snippet.accelerator || 'Control+Alt+P';
+    this.hotkeyDisplay.textContent = snippet.accelerator || 'Control+Alt+P';
+    this.formSlot.value = snippet.slot.toString();
+    this.formEnabled.checked = snippet.enabled;
+    this.hotkeyFeedback.textContent = '';
+    this.hotkeyFeedback.className = 'form-hint';
+    this.modal.classList.remove('hidden');
+  }
+
+  private closeModal(): void {
+    this.modal.classList.add('hidden');
+    if (this.isRecordingHotkey) {
+      this.isRecordingHotkey = false;
+      this.hotkeyDisplay.classList.remove('recording');
+      window.appApi.hotkeys.stopRecording();
+    }
+  }
+
+  private async startRecordingHotkey(): Promise<void> {
+    this.isRecordingHotkey = true;
+    this.hotkeyDisplay.classList.add('recording');
+    this.hotkeyDisplay.textContent = 'Presiona teclas...';
+    this.hotkeyFeedback.textContent = 'Presiona la combinación deseada (ej. Ctrl+Alt+P o F1-F24)...';
+    this.hotkeyFeedback.className = 'form-hint';
+    await window.appApi.hotkeys.startRecording();
+  }
+
+  private async handleKeyDown(e: KeyboardEvent): Promise<void> {
+    if (!this.isRecordingHotkey) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Ignore single modifier presses
+    if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+      return;
+    }
+
+    const parts: string[] = [];
+    if (e.ctrlKey) parts.push('Control');
+    if (e.altKey) parts.push('Alt');
+    if (e.shiftKey) parts.push('Shift');
+    if (e.metaKey) parts.push('Super');
+
+    let key = e.key;
+    if (key.length === 1) {
+      key = key.toUpperCase();
+    } else if (key.startsWith('Arrow')) {
+      key = key.replace('Arrow', '');
+    }
+
+    parts.push(key);
+    const rawAcc = parts.join('+');
+
+    const result = await window.appApi.hotkeys.validate(rawAcc);
+
+    if (result.valid && result.normalized) {
+      this.formAccelerator.value = result.normalized;
+      this.hotkeyDisplay.textContent = result.normalized;
+      this.hotkeyFeedback.textContent = 'Atajo válido y listo para asignar.';
+      this.hotkeyFeedback.className = 'form-hint';
+    } else {
+      this.hotkeyFeedback.textContent = result.error || 'Combinación no válida';
+      this.hotkeyFeedback.className = 'form-hint error';
+    }
+
+    this.isRecordingHotkey = false;
+    this.hotkeyDisplay.classList.remove('recording');
+    await window.appApi.hotkeys.stopRecording();
+  }
+
+  private async handleSaveSnippet(e: Event): Promise<void> {
+    e.preventDefault();
+
+    const id = this.formSnippetId.value;
+    const title = this.formTitle.value.trim();
+    const content = this.formContent.value;
+    const accelerator = this.formAccelerator.value.trim();
+    const slot = this.formSlot.value ? (parseInt(this.formSlot.value, 10) as any) : undefined;
+    const enabled = this.formEnabled.checked;
+
+    try {
+      if (id) {
+        await window.appApi.snippets.update({
+          id,
+          title,
+          content,
+          accelerator,
+          slot,
+          enabled
+        });
+      } else {
+        await window.appApi.snippets.create({
+          title,
+          content,
+          accelerator,
+          slot,
+          enabled
+        });
+      }
+
+      this.closeModal();
+      await this.loadSnippets();
+    } catch (err: any) {
+      alert(`Error al guardar frase: ${err.message || err}`);
+    }
+  }
+
+  // REORDER
+  private async loadReorderView(): Promise<void> {
+    this.snippets = await window.appApi.snippets.list();
+    const groups = Array.from(
+      new Map(this.snippets.map((s) => [s.hotkeyGroupId, s.accelerator])).entries()
+    );
+
+    this.reorderHotkeySelect.innerHTML = '';
+    for (const [groupId, acc] of groups) {
+      const opt = document.createElement('option');
+      opt.value = groupId;
+      opt.textContent = acc || 'Sin atajo';
+      this.reorderHotkeySelect.appendChild(opt);
+    }
+
+    this.handleReorderHotkeyChange();
+  }
+
+  private handleReorderHotkeyChange(): void {
+    const selectedGroupId = this.reorderHotkeySelect.value;
+    if (!selectedGroupId) {
+      this.reorderList.innerHTML = '<p class="form-hint">No hay atajos para ordenar.</p>';
+      return;
+    }
+
+    this.reorderItemsState = this.snippets
+      .filter((s) => s.hotkeyGroupId === selectedGroupId)
+      .sort((a, b) => a.slot - b.slot);
+
+    this.renderReorderList();
+  }
+
+  private renderReorderList(): void {
+    this.reorderList.innerHTML = '';
+
+    this.reorderItemsState.forEach((snippet, index) => {
+      const div = document.createElement('div');
+      div.className = 'reorder-item';
+
+      div.innerHTML = `
+        <span class="slot-badge">${index + 1 === 10 ? '0' : index + 1}</span>
+        <div class="reorder-info">
+          <div class="reorder-title">${this.escapeHtml(snippet.title)}</div>
+          <div class="reorder-stats">${snippet.usageCount} usos</div>
+        </div>
+        <div class="reorder-buttons">
+          <button class="btn-icon" data-move-up="${index}" ${index === 0 ? 'disabled' : ''}>▲</button>
+          <button class="btn-icon" data-move-down="${index}" ${index === this.reorderItemsState.length - 1 ? 'disabled' : ''}>▼</button>
+        </div>
+      `;
+
+      this.reorderList.appendChild(div);
+    });
+
+    this.reorderList.querySelectorAll('[data-move-up]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-move-up')!, 10);
+        if (idx > 0) {
+          const temp = this.reorderItemsState[idx];
+          this.reorderItemsState[idx] = this.reorderItemsState[idx - 1];
+          this.reorderItemsState[idx - 1] = temp;
+          this.renderReorderList();
+        }
+      });
+    });
+
+    this.reorderList.querySelectorAll('[data-move-down]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-move-down')!, 10);
+        if (idx < this.reorderItemsState.length - 1) {
+          const temp = this.reorderItemsState[idx];
+          this.reorderItemsState[idx] = this.reorderItemsState[idx + 1];
+          this.reorderItemsState[idx + 1] = temp;
+          this.renderReorderList();
+        }
+      });
+    });
+  }
+
+  private async handleSaveReorder(): Promise<void> {
+    const groupId = this.reorderHotkeySelect.value;
+    if (!groupId || this.reorderItemsState.length === 0) return;
+
+    try {
+      const orderedSnippetIds = this.reorderItemsState.map((s) => s.id);
+      await window.appApi.snippets.reorder({
+        hotkeyGroupId: groupId,
+        orderedSnippetIds
+      });
+
+      alert('Nuevo orden guardado exitosamente.');
+      await this.loadSnippets();
+      this.handleReorderHotkeyChange();
+    } catch (err: any) {
+      alert(`Error al guardar orden: ${err.message || err}`);
+    }
+  }
+
+  // STATS
+  private async loadStats(): Promise<void> {
+    const summary: StatsSummary = await window.appApi.stats.summary();
+    const snippetStats: SnippetStats[] = await window.appApi.stats.bySnippet();
+
+    this.statTotal.textContent = summary.totalExpansions.toLocaleString();
+    this.statToday.textContent = summary.todayExpansions.toLocaleString();
+    this.stat7d.textContent = summary.last7DaysExpansions.toLocaleString();
+    this.stat30d.textContent = summary.last30DaysExpansions.toLocaleString();
+
+    this.statsTbody.innerHTML = '';
+    for (const item of snippetStats) {
+      const tr = document.createElement('tr');
+      const lastUsed = item.lastUsedAt
+        ? new Date(item.lastUsedAt).toLocaleDateString()
+        : 'Nunca';
+
+      tr.innerHTML = `
+        <td><strong>${this.escapeHtml(item.title)}</strong></td>
+        <td><span class="hotkey-tag">${item.accelerator}</span></td>
+        <td><span class="slot-badge">${item.slot === 10 ? '0' : item.slot}</span></td>
+        <td style="text-align: right; font-weight: 600;">${item.totalUsage.toLocaleString()}</td>
+        <td style="text-align: right;">${item.usage7Days.toLocaleString()}</td>
+        <td style="text-align: right;">${item.usage30Days.toLocaleString()}</td>
+        <td style="text-align: right; color: var(--text-muted);">${lastUsed}</td>
+      `;
+
+      this.statsTbody.appendChild(tr);
+    }
+  }
+
+  // SETTINGS
+  private async loadSettings(): Promise<void> {
+    const settings: AppSettings = await window.appApi.settings.get();
+    this.settingLaunchAtLogin.checked = settings.launchAtLogin;
+    this.settingAdminMode.checked = settings.administratorMode;
+    this.settingHotkeysEnabled.checked = settings.hotkeysEnabled;
+    this.settingStartHidden.checked = settings.startHidden;
+
+    this.updateStatusBadge(settings.hotkeysEnabled);
+  }
+
+  private updateStatusBadge(enabled: boolean): void {
+    if (enabled) {
+      this.statusIndicator.className = 'status-indicator ready';
+      this.statusText.textContent = 'Hotkeys activos';
+    } else {
+      this.statusIndicator.className = 'status-indicator paused';
+      this.statusText.textContent = 'Hotkeys pausados';
+    }
+  }
+
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    new MainApp();
+  });
+} else {
+  new MainApp();
+}

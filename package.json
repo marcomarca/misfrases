@@ -1,0 +1,41 @@
+{
+  "name": "mis-frases",
+  "version": "1.0.0",
+  "description": "Windows Snippet & Prompt Manager",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "bun scripts/build.ts && electron .",
+    "build": "bun scripts/build.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "spike": "bun scripts/p0-spike.ts",
+    "start": "electron .",
+    "package": "bun scripts/build.ts && electron-forge package",
+    "make": "bun scripts/build.ts && electron-forge make"
+  },
+  "keywords": [
+    "snippets",
+    "hotkey",
+    "electron",
+    "windows"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "koffi": "^2.9.3",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.7.0",
+    "@electron-forge/maker-squirrel": "^7.7.0",
+    "@electron-forge/maker-zip": "^7.7.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.7.0",
+    "@electron/rebuild": "^4.2.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/bun": "^1.2.0",
+    "@types/node": "^22.13.4",
+    "electron": "^34.2.0",
+    "typescript": "^5.7.3"
+  }
+}

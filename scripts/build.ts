@@ -59,17 +59,17 @@ if (fs.existsSync(srcRenderer)) {
   });
 }
 
-console.log('Copying windows branding and icon assets...');
-const windowsDir = path.join(__dirname, '../windows');
-const distWindowsDir = path.join(__dirname, '../dist/windows');
+console.log('Copying application branding and icon assets...');
+const srcAssetsDir = path.join(__dirname, '../src/assets');
+const distAssetsDir = path.join(__dirname, '../dist/assets');
 const mainAssetsDir = path.join(__dirname, '../dist/renderer/main/assets');
 const selectorAssetsDir = path.join(__dirname, '../dist/renderer/selector/assets');
 
-if (fs.existsSync(windowsDir)) {
-  fs.cpSync(windowsDir, distWindowsDir, { recursive: true, force: true });
+if (fs.existsSync(srcAssetsDir)) {
+  fs.cpSync(srcAssetsDir, distAssetsDir, { recursive: true, force: true });
 
   // Copy app_png icons to renderer assets for web display
-  const appPngDir = path.join(windowsDir, 'app_png');
+  const appPngDir = path.join(srcAssetsDir, 'app_png');
   if (fs.existsSync(appPngDir)) {
     fs.cpSync(appPngDir, mainAssetsDir, { recursive: true, force: true });
     fs.cpSync(appPngDir, selectorAssetsDir, { recursive: true, force: true });

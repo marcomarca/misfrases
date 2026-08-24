@@ -80,14 +80,14 @@ export class TrayService {
   private createTrayIcon(): Electron.NativeImage {
     // 1. Try Windows tray icon paths
     const possiblePaths = [
-      path.join(__dirname, '../../../windows/tray/tray.ico'),
-      path.join(__dirname, '../../windows/tray/tray.ico'),
-      path.join(__dirname, '../../../windows/tray/electron_scale_assets/tray.png'),
-      path.join(__dirname, '../../windows/tray/electron_scale_assets/tray.png'),
-      path.join(__dirname, '../../../windows/app_png/icon-32x32.png'),
-      path.join(__dirname, '../../windows/app_png/icon-32x32.png'),
-      path.join(process.resourcesPath, 'windows/tray/tray.ico'),
-      path.join(process.resourcesPath, 'windows/tray/electron_scale_assets/tray.png')
+      path.join(__dirname, '../../../src/assets/tray/tray.ico'),
+      path.join(__dirname, '../../assets/tray/tray.ico'),
+      path.join(__dirname, '../../../src/assets/tray/electron_scale_assets/tray.png'),
+      path.join(__dirname, '../../assets/tray/electron_scale_assets/tray.png'),
+      path.join(__dirname, '../../../src/assets/app_png/icon-32x32.png'),
+      path.join(__dirname, '../../assets/app_png/icon-32x32.png'),
+      path.join(process.resourcesPath, 'assets/tray/tray.ico'),
+      path.join(process.resourcesPath, 'assets/tray/electron_scale_assets/tray.png')
     ];
 
     for (const iconPath of possiblePaths) {

@@ -9,13 +9,13 @@ const config: ForgeConfig = {
     asar: true,
     name: 'MisFrases',
     executableName: 'mis-frases',
-    icon: './windows/icon'
+    icon: './src/assets/icon'
   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
       name: 'MisFrases',
-      setupIcon: './windows/icon.ico'
+      setupIcon: './src/assets/icon.ico'
     }),
     new MakerZIP({}, ['win32'])
   ],

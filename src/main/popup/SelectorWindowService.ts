@@ -57,11 +57,11 @@ export class SelectorWindowService {
     y = Math.max(area.y, Math.min(y, area.y + area.height - popupHeight));
 
     const possibleIconPaths = [
-      path.join(__dirname, '../../../windows/icon.ico'),
-      path.join(__dirname, '../../windows/icon.ico'),
-      path.join(__dirname, '../../../windows/app_png/icon-256x256.png'),
-      path.join(__dirname, '../../windows/app_png/icon-256x256.png'),
-      path.join(process.resourcesPath, 'windows/icon.ico')
+      path.join(__dirname, '../../../src/assets/icon.ico'),
+      path.join(__dirname, '../../assets/icon.ico'),
+      path.join(__dirname, '../../../src/assets/app_png/icon-256x256.png'),
+      path.join(__dirname, '../../assets/app_png/icon-256x256.png'),
+      path.join(process.resourcesPath, 'assets/icon.ico')
     ];
     let iconPath: string | undefined;
     for (const p of possibleIconPaths) {

@@ -35,13 +35,23 @@ class SelectorApp {
       const item = document.createElement('div');
       item.className = 'selector-item';
       item.dataset.slot = snippet.slot.toString();
-      item.setAttribute('title', snippet.title);
+
+      const tooltipText = snippet.description
+        ? `${snippet.title}\n${snippet.description}`
+        : snippet.title;
+      item.setAttribute('title', tooltipText);
 
       const displayKey = snippet.slot === 10 ? '0' : snippet.slot.toString();
+      const descHtml = snippet.description
+        ? `<div class="item-description">${this.escapeHtml(snippet.description)}</div>`
+        : '';
 
       item.innerHTML = `
         <div class="key-badge">${displayKey}</div>
-        <div class="item-title" title="${this.escapeHtml(snippet.title)}">${this.escapeHtml(snippet.title)}</div>
+        <div class="item-body">
+          <div class="item-title">${this.escapeHtml(snippet.title)}</div>
+          ${descHtml}
+        </div>
         <div class="item-usage">${snippet.usageCount} usos</div>
       `;
 

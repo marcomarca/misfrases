@@ -25,6 +25,7 @@ export const migrations: Migration[] = [
           id TEXT PRIMARY KEY,
           hotkey_group_id TEXT NOT NULL,
           title TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
           content TEXT NOT NULL,
           slot INTEGER NOT NULL CHECK (slot >= 1 AND slot <= 10),
           enabled INTEGER NOT NULL DEFAULT 1,
@@ -68,6 +69,19 @@ export const migrations: Migration[] = [
           updated_at INTEGER NOT NULL
         );
       `);
+    }
+  },
+  {
+    version: 2,
+    up: (db: IDatabase) => {
+      // Check if column exists before altering to support both fresh v1 and upgrade
+      const tableInfo = db.prepare("PRAGMA table_info('snippets')").all() as { name: string }[];
+      const hasDescription = tableInfo.some((col) => col.name === 'description');
+      if (!hasDescription) {
+        db.exec(`
+          ALTER TABLE snippets ADD COLUMN description TEXT NOT NULL DEFAULT '';
+        `);
+      }
     }
   }
 ];

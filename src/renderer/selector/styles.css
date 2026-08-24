@@ -89,15 +89,21 @@ body {
   color: #ffffff;
 }
 
+.selector-item:hover .item-description {
+  white-space: normal;
+  word-break: break-word;
+  color: #e2e8f0;
+}
+
 .key-badge {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   background-color: var(--key-badge-bg);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  border-radius: 5px;
   font-weight: 700;
   font-size: 12px;
   color: #ffffff;
@@ -105,18 +111,39 @@ body {
   flex-shrink: 0;
 }
 
-.item-title {
+.item-body {
   flex: 1;
-  font-weight: 500;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.3;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease;
+}
+
+.item-description {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
+  transition: color 0.15s ease;
 }
 
 .item-usage {
   font-size: 11px;
   color: var(--text-muted);
   flex-shrink: 0;
+  align-self: center;
 }

@@ -11,6 +11,7 @@ export interface Snippet {
   id: string;
   hotkeyGroupId: string;
   title: string;
+  description: string;
   content: string;
   slot: SlotNumber;
   enabled: boolean;
@@ -60,6 +61,7 @@ export interface StatsSummary {
 export interface SnippetStats {
   id: string;
   title: string;
+  description: string;
   accelerator: string;
   slot: SlotNumber;
   totalUsage: number;
@@ -70,6 +72,7 @@ export interface SnippetStats {
 
 export interface CreateSnippetInput {
   title: string;
+  description?: string;
   content: string;
   accelerator: string;
   slot?: SlotNumber;
@@ -79,6 +82,7 @@ export interface CreateSnippetInput {
 export interface UpdateSnippetInput {
   id: string;
   title?: string;
+  description?: string;
   content?: string;
   accelerator?: string;
   slot?: SlotNumber;

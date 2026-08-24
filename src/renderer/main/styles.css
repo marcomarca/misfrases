@@ -265,6 +265,29 @@ body {
   background-color: rgba(255, 255, 255, 0.02);
 }
 
+.title-cell-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.snippet-description {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.form-hint-inline {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: normal;
+  margin-left: 4px;
+}
+
 .slot-badge {
   display: inline-flex;
   align-items: center;

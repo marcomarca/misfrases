@@ -26,6 +26,7 @@ class MainApp {
   private snippetForm!: HTMLFormElement;
   private formSnippetId!: HTMLInputElement;
   private formTitle!: HTMLInputElement;
+  private formDescription!: HTMLTextAreaElement;
   private formContent!: HTMLTextAreaElement;
   private formAccelerator!: HTMLInputElement;
   private formSlot!: HTMLSelectElement;
@@ -74,6 +75,7 @@ class MainApp {
     this.snippetForm = document.getElementById('snippet-form') as HTMLFormElement;
     this.formSnippetId = document.getElementById('form-snippet-id') as HTMLInputElement;
     this.formTitle = document.getElementById('form-title') as HTMLInputElement;
+    this.formDescription = document.getElementById('form-description') as HTMLTextAreaElement;
     this.formContent = document.getElementById('form-content') as HTMLTextAreaElement;
     this.formAccelerator = document.getElementById('form-accelerator') as HTMLInputElement;
     this.formSlot = document.getElementById('form-slot') as HTMLSelectElement;
@@ -227,6 +229,7 @@ class MainApp {
       const matchQuery =
         !query ||
         s.title.toLowerCase().includes(query) ||
+        (s.description && s.description.toLowerCase().includes(query)) ||
         s.content.toLowerCase().includes(query) ||
         (s.accelerator && s.accelerator.toLowerCase().includes(query));
 
@@ -247,10 +250,19 @@ class MainApp {
     for (const snippet of filtered) {
       const tr = document.createElement('tr');
 
+      const descHtml = snippet.description
+        ? `<div class="snippet-description">${this.escapeHtml(snippet.description)}</div>`
+        : '';
+
       tr.innerHTML = `
         <td><span class="slot-badge">${snippet.slot === 10 ? '0' : snippet.slot}</span></td>
         <td><span class="hotkey-tag">${snippet.accelerator || '-'}</span></td>
-        <td><strong>${this.escapeHtml(snippet.title)}</strong></td>
+        <td>
+          <div class="title-cell-container">
+            <strong>${this.escapeHtml(snippet.title)}</strong>
+            ${descHtml}
+          </div>
+        </td>
         <td><div class="content-preview">${this.escapeHtml(snippet.content)}</div></td>
         <td style="text-align: center;">${snippet.usageCount.toLocaleString()}</td>
         <td style="text-align: center;">
@@ -322,6 +334,7 @@ class MainApp {
     this.modalTitle.textContent = 'Nueva Frase';
     this.formSnippetId.value = '';
     this.formTitle.value = '';
+    this.formDescription.value = '';
     this.formContent.value = '';
     this.formAccelerator.value = 'Control+Alt+P';
     this.hotkeyDisplay.textContent = 'Control+Alt+P';
@@ -340,6 +353,7 @@ class MainApp {
     this.modalTitle.textContent = 'Editar Frase';
     this.formSnippetId.value = snippet.id;
     this.formTitle.value = snippet.title;
+    this.formDescription.value = snippet.description || '';
     this.formContent.value = snippet.content;
     this.formAccelerator.value = snippet.accelerator || 'Control+Alt+P';
     this.hotkeyDisplay.textContent = snippet.accelerator || 'Control+Alt+P';
@@ -393,23 +407,23 @@ class MainApp {
     }
 
     parts.push(key);
-    const rawAcc = parts.join('+');
 
-    const result = await window.appApi.hotkeys.validate(rawAcc);
+    const accelerator = parts.join('+');
+    this.formAccelerator.value = accelerator;
+    this.hotkeyDisplay.textContent = accelerator;
 
-    if (result.valid && result.normalized) {
-      this.formAccelerator.value = result.normalized;
-      this.hotkeyDisplay.textContent = result.normalized;
-      this.hotkeyFeedback.textContent = 'Atajo válido y listo para asignar.';
-      this.hotkeyFeedback.className = 'form-hint';
-    } else {
-      this.hotkeyFeedback.textContent = result.error || 'Combinación no válida';
+    // Validate in real time
+    const res = await window.appApi.hotkeys.validate(accelerator);
+    if (!res.valid) {
+      this.hotkeyFeedback.textContent = `❌ ${res.error || 'Atajo inválido'}`;
       this.hotkeyFeedback.className = 'form-hint error';
+    } else {
+      this.hotkeyFeedback.textContent = '✅ Atajo válido';
+      this.hotkeyFeedback.className = 'form-hint success';
+      this.isRecordingHotkey = false;
+      this.hotkeyDisplay.classList.remove('recording');
+      window.appApi.hotkeys.stopRecording();
     }
-
-    this.isRecordingHotkey = false;
-    this.hotkeyDisplay.classList.remove('recording');
-    await window.appApi.hotkeys.stopRecording();
   }
 
   private async handleSaveSnippet(e: Event): Promise<void> {
@@ -417,6 +431,7 @@ class MainApp {
 
     const id = this.formSnippetId.value;
     const title = this.formTitle.value.trim();
+    const description = this.formDescription.value.trim();
     const content = this.formContent.value;
     const accelerator = this.formAccelerator.value.trim();
     const slot = this.formSlot.value ? (parseInt(this.formSlot.value, 10) as any) : undefined;
@@ -427,6 +442,7 @@ class MainApp {
         await window.appApi.snippets.update({
           id,
           title,
+          description,
           content,
           accelerator,
           slot,
@@ -436,6 +452,7 @@ class MainApp {
       } else {
         await window.appApi.snippets.create({
           title,
+          description,
           content,
           accelerator,
           slot,

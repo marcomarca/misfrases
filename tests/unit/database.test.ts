@@ -33,7 +33,7 @@ describe('Database Repositories', () => {
     expect(group2.id).toBe(group.id);
   });
 
-  test('creates snippet with auto slot allocation and limits to 10 slots', () => {
+  test('creates snippet with description and auto slot allocation and limits to 10 slots', () => {
     const group = hotkeyRepo.create('Control+Alt+T');
 
     // Create 10 snippets
@@ -42,11 +42,20 @@ describe('Database Repositories', () => {
       const s = snippetRepo.create({
         hotkeyGroupId: group.id,
         title: `Snippet ${i}`,
+        description: `Description for snippet ${i}`,
         content: `Content ${i}`
       });
       expect(s.slot).toBe(i as any);
+      expect(s.description).toBe(`Description for snippet ${i}`);
       createdSnippets.push(s);
     }
+
+    // Update snippet description
+    const updated = snippetRepo.update({
+      id: createdSnippets[0].id,
+      description: 'Updated Description'
+    });
+    expect(updated.description).toBe('Updated Description');
 
     // 11th snippet must throw error
     expect(() => {

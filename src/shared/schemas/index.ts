@@ -16,6 +16,7 @@ export const SlotNumberSchema = z.union([
 
 export const CreateSnippetSchema = z.object({
   title: z.string().trim().min(1, 'El título es obligatorio').max(120, 'Máximo 120 caracteres'),
+  description: z.string().trim().max(300, 'Máximo 300 caracteres').optional().default(''),
   content: z.string().min(1, 'El contenido es obligatorio'),
   accelerator: z.string().trim().min(1, 'El atajo de teclado es obligatorio'),
   slot: SlotNumberSchema.optional(),
@@ -25,6 +26,7 @@ export const CreateSnippetSchema = z.object({
 export const UpdateSnippetSchema = z.object({
   id: z.string().min(1),
   title: z.string().trim().min(1).max(120).optional(),
+  description: z.string().trim().max(300).optional(),
   content: z.string().min(1).optional(),
   accelerator: z.string().trim().min(1).optional(),
   slot: SlotNumberSchema.optional(),

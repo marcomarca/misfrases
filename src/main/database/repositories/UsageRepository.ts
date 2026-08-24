@@ -65,6 +65,7 @@ export class UsageRepository {
       SELECT
         s.id,
         s.title,
+        s.description,
         s.slot,
         s.usage_count as totalUsage,
         s.last_used_at as lastUsedAt,
@@ -88,6 +89,7 @@ export class UsageRepository {
     interface Row {
       id: string;
       title: string;
+      description: string;
       slot: number;
       totalUsage: number;
       lastUsedAt: number | null;
@@ -101,6 +103,7 @@ export class UsageRepository {
     return rows.map((r) => ({
       id: r.id,
       title: r.title,
+      description: r.description || '',
       accelerator: r.accelerator,
       slot: r.slot as SlotNumber,
       totalUsage: r.totalUsage,

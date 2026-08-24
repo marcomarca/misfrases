@@ -7,6 +7,7 @@ interface SnippetRow {
   id: string;
   hotkey_group_id: string;
   title: string;
+  description: string;
   content: string;
   slot: number;
   enabled: number;
@@ -23,6 +24,7 @@ function mapRow(row: SnippetRow): Snippet {
     id: row.id,
     hotkeyGroupId: row.hotkey_group_id,
     title: row.title,
+    description: row.description || '',
     content: row.content,
     slot: row.slot as SlotNumber,
     enabled: Boolean(row.enabled),
@@ -107,6 +109,7 @@ export class SnippetRepository {
   public create(params: {
     hotkeyGroupId: string;
     title: string;
+    description?: string;
     content: string;
     slot?: SlotNumber;
     enabled?: boolean;
@@ -133,6 +136,7 @@ export class SnippetRepository {
       id: randomUUID(),
       hotkeyGroupId: params.hotkeyGroupId,
       title: params.title,
+      description: params.description || '',
       content: params.content,
       slot: targetSlot,
       enabled: params.enabled !== undefined ? params.enabled : true,
@@ -146,13 +150,14 @@ export class SnippetRepository {
     this.db
       .prepare(`
         INSERT INTO snippets (
-          id, hotkey_group_id, title, content, slot, enabled, usage_count, last_used_at, created_at, updated_at, deleted_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          id, hotkey_group_id, title, description, content, slot, enabled, usage_count, last_used_at, created_at, updated_at, deleted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .run(
         snippet.id,
         snippet.hotkeyGroupId,
         snippet.title,
+        snippet.description,
         snippet.content,
         snippet.slot,
         snippet.enabled ? 1 : 0,
@@ -170,6 +175,7 @@ export class SnippetRepository {
     id: string;
     hotkeyGroupId?: string;
     title?: string;
+    description?: string;
     content?: string;
     slot?: SlotNumber;
     enabled?: boolean;
@@ -193,6 +199,7 @@ export class SnippetRepository {
     }
 
     const title = params.title !== undefined ? params.title : current.title;
+    const description = params.description !== undefined ? params.description : current.description;
     const content = params.content !== undefined ? params.content : current.content;
     const enabled = params.enabled !== undefined ? params.enabled : current.enabled;
     const now = Date.now();
@@ -202,13 +209,14 @@ export class SnippetRepository {
         UPDATE snippets
         SET hotkey_group_id = ?,
             title = ?,
+            description = ?,
             content = ?,
             slot = ?,
             enabled = ?,
             updated_at = ?
         WHERE id = ?
       `)
-      .run(targetGroupId, title, content, targetSlot, enabled ? 1 : 0, now, current.id);
+      .run(targetGroupId, title, description, content, targetSlot, enabled ? 1 : 0, now, current.id);
 
     return this.findById(current.id)!;
   }

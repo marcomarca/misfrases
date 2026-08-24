@@ -34,11 +34,12 @@ export class SelectorWindowService {
       this.window.destroy();
     }
 
-    const popupWidth = 390;
+    const popupWidth = 420;
     // Calculate approximate height: header + item height * count + padding
-    const itemHeight = 44;
+    const hasDescriptions = snippets.some((s) => Boolean(s.description));
+    const itemHeight = hasDescriptions ? 54 : 44;
     const headerHeight = 48;
-    const popupHeight = Math.min(headerHeight + snippets.length * itemHeight + 16, 520);
+    const popupHeight = Math.min(headerHeight + snippets.length * itemHeight + 20, 580);
 
     const cursor = screen.getCursorScreenPoint();
     const display = screen.getDisplayNearestPoint(cursor);

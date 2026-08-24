@@ -7,9 +7,25 @@ const config: ForgeConfig = {
   outDir: 'release-bin',
   packagerConfig: {
     asar: true,
+    prune: true,
     name: 'MisFrases',
     executableName: 'mis-frases',
-    icon: './src/assets/icon'
+    icon: './src/assets/icon',
+    ignore: [
+      /^\/src($|\/)/,
+      /^\/tests($|\/)/,
+      /^\/scripts($|\/)/,
+      /^\/release($|\/)/,
+      /^\/release-bin($|\/)/,
+      /^\/out($|\/)/,
+      /^\/\.git($|\/)/,
+      /^\/\.agents($|\/)/,
+      /^\/\.gemini($|\/)/,
+      /tsconfig\.json$/,
+      /bun\.lock$/,
+      /PLAN\.MD$/,
+      /RUN\.MD$/
+    ]
   },
   rebuildConfig: {},
   makers: [

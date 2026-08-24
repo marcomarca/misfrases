@@ -138,7 +138,6 @@ describe('ExpansionService', () => {
     expect(windowsInput.restoredHwnd).toBe(1001);
     expect(windowsInput.pasteCalled).toBe(true);
     expect(clipboardGuard.tempText).toBe('Auto expanded text');
-    expect(clipboardGuard.restoredSnapshot?.text).toBe('previous clipboard');
 
     const stats = statsService.getSummary();
     expect(stats.totalExpansions).toBe(1);
@@ -167,20 +166,18 @@ describe('ExpansionService', () => {
     expect(expansionService.getState()).toBe('READY');
   });
 
-  test('falls back to Unicode injection when clipboard cannot be safely preserved', async () => {
-    clipboardGuard.safe = false; // unsafe clipboard (e.g. complex format)
-
+  test('always copies full snippet to clipboard and sends instantaneous paste', async () => {
     const group = hotkeyRepo.create('Control+Alt+U');
     snippetRepo.create({
       hotkeyGroupId: group.id,
-      title: 'Unicode Fallback',
-      content: 'Texto con acentos: áéíóú ñ'
+      title: 'Prompt Expansion',
+      content: 'Texto con acentos: áéíóú ñ y prompt largo'
     });
 
     await expansionService.handleHotkeyTrigger('Control+Alt+U');
 
-    expect(clipboardGuard.tempText).toBeNull(); // Clipboard never touched!
-    expect(windowsInput.unicodeSent).toContain('Texto con acentos: áéíóú ñ');
+    expect(clipboardGuard.tempText).toBe('Texto con acentos: áéíóú ñ y prompt largo');
+    expect(windowsInput.pasteCalled).toBe(true);
     expect(statsService.getSummary().totalExpansions).toBe(1);
   });
 

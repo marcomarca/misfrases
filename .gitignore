@@ -4,6 +4,7 @@ out/
 release/
 release-bin/
 release-app/
+release-package/
 .vite/
 *.log
 .DS_Store

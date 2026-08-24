@@ -76,42 +76,22 @@ export class ExpansionService {
 
       await this.windowsInput.waitForModifiersReleased(1000);
 
+      // 1. Copy full prompt/snippet content directly to Windows clipboard
+      this.clipboardGuard.setTemporaryText(snippet.content);
+
+      // 2. Perform instantaneous paste (Ctrl+V) via Win32 SendInput
+      const pasteOk = this.windowsInput.sendPaste();
+
       let dispatched = false;
 
-      // Check if clipboard is safe to preserve
-      if (this.clipboardGuard.canSnapshotSafely()) {
-        const snapshot = this.clipboardGuard.snapshot();
-        try {
-          this.clipboardGuard.setTemporaryText(snippet.content);
-          const pasteOk = this.windowsInput.sendPaste();
-
-          if (pasteOk) {
-            dispatched = true;
-            // Allow target application message pump to consume WM_PASTE
-            await new Promise((resolve) => setTimeout(resolve, 80));
-          } else {
-            this.logger.error('Win32 error', 'SendInput paste failed, falling back to Unicode', undefined, {
-              snippetId: snippet.id
-            });
-            dispatched = this.windowsInput.sendUnicode(snippet.content);
-          }
-        } catch (pasteErr) {
-          this.logger.error('expansion failure', 'Error during clipboard paste', pasteErr, {
-            snippetId: snippet.id
-          });
-        } finally {
-          try {
-            this.clipboardGuard.restore(snapshot);
-          } catch (restoreErr) {
-            this.logger.error('clipboard restoration failure', 'Failed to restore clipboard snapshot', restoreErr);
-          }
-        }
+      if (pasteOk) {
+        dispatched = true;
+        // Brief pause to allow the target application to process the paste message
+        await new Promise((resolve) => setTimeout(resolve, 60));
       } else {
-        // Unsafe clipboard formats -> use Unicode injection directly without modifying clipboard
-        this.logger.info('expansion', 'Using Unicode injection fallback to preserve clipboard contents', {
+        this.logger.error('expansion failure', 'SendInput Ctrl+V paste failed', undefined, {
           snippetId: snippet.id
         });
-        dispatched = this.windowsInput.sendUnicode(snippet.content);
       }
 
       if (dispatched) {

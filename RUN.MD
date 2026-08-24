@@ -1,69 +1,88 @@
-# RUN.MD — Guía Ultracondensada de Comandos
+# RUN.MD — Guía de Comandos y Referencia Operativa
 
-Guía rápida de comandos de ejecución, pruebas, desarrollo y atajos de **Mis Frases**.
+Guía de comandos de desarrollo, empaquetado, atajos de teclado y estructura para **Mis Frases**.
 
 ---
 
 ## 1. Comandos del Proyecto (Terminal)
 
 ```bash
-# Instalar dependencias
+# 1. Instalar dependencias
 bun install --ignore-scripts
 
-# Reconstruir módulos nativos para Electron (primera vez o tras actualizar deps)
+# 2. Reconstruir módulos nativos C++ (better-sqlite3, koffi) para Electron
 bunx electron-rebuild
 
-# Iniciar en modo desarrollo (compila y abre la app)
+# 3. Iniciar en modo desarrollo (compila assets y abre la app)
 bun run dev
 
-# Ejecutar suite de pruebas unitarias e integración
+# 4. Ejecutar pruebas unitarias e integración (16 tests)
 bun test
 
-# Verificación estricta de tipos TypeScript
+# 5. Verificación estricta de tipos TypeScript
 bun run typecheck
 
-# Compilar TypeScript y copiar assets a dist/
+# 6. Compilar TypeScript y empaquetar renderer/assets a dist/
 bun run build
 
-# Ejecutar Spike P0 (validación aislada de Win32/Koffi/SendInput)
+# 7. Ejecutar Spike P0 (validación aislada de Win32/Koffi/SendInput)
 bun run spike
 
-# Empaquetar aplicación para Windows x64
+# 8. Empaquetar ejecutable autónomo (.exe portable en release/)
 bun run package
 
-# Generar instalador ejecutable (Setup.exe)
+# 9. Generar instalador de Windows (Setup.exe)
 bun run make
 ```
 
 ---
 
-## 2. Uso y Atajos en el Programa
+## 2. Diferencia entre Carpetas de Salida
+
+* **`dist/`**: Código JavaScript compilado y assets estáticos. Utilizado directamente por `bun run dev`.
+* **`release/`**: Ejecutable final distribuible (`release\MisFrases-win32-x64\mis-frases.exe`) con runtime de Chromium y DLLs nativas empaquetadas.
+
+---
+
+## 3. Uso y Atajos en el Programa
 
 | Acción | Combinación / Tecla | Comportamiento |
 |---|---|---|
-| **Disparar Frase Única** | `Hotkey` configurado (ej: `Ctrl+Alt+P`) | Inserta el texto inmediatamente en la ventana activa. |
-| **Disparar Frases Compartidas** | `Hotkey` con 2–10 frases | Abre el popup selector flotante junto al cursor. |
-| **Seleccionar Slot** | Teclas `1` a `9` | Inserta la frase asignada al slot 1..9 y cierra el popup. |
-| **Seleccionar Slot 10** | Tecla `0` | Inserta la frase asignada al slot 10 y cierra el popup. |
-| **Cancelar Popup** | Tecla `Escape` o clic fuera | Cierra el popup sin modificar el texto ni el portapapeles. |
-| **Ocultar Ventana Principal** | Botón `X` | Minimiza la aplicación a la bandeja del sistema (System Tray). |
-| **Cerrar Aplicación** | Tray -> `Salir` | Cierra completamente el proceso y libera los atajos globales. |
+| **Disparar Frase Única** | `Hotkey` configurado (ej: `Ctrl+Alt+P`) | Expande e inserta el texto inmediatamente en la ventana activa. |
+| **Disparar Frases Compartidas** | `Hotkey` con 2 a 10 frases | Abre el selector flotante junto al cursor. |
+| **Seleccionar Slot 1 al 9** | Teclas `1` a `9` | Inserta la frase del slot correspondiente y cierra el selector. |
+| **Seleccionar Slot 10** | Tecla `0` | Inserta la frase asignada al slot 10 y cierra el selector. |
+| **Cancelar Selector** | Tecla `Escape` o clic fuera | Cierra el selector sin alterar el portapapeles ni el foco. |
+| **Abrir DevTools (Modo Dev)** | Tecla `F12` | Abre la consola de herramientas de desarrollo de Electron. |
+| **Ocultar Ventana** | Botón `X` de la ventana | Oculta la app en la bandeja del sistema (System Tray). |
+| **Cerrar Totalmente** | Menú Tray -> `Salir` | Finaliza el proceso y libera todos los atajos globales. |
 
 ---
 
-## 3. Reglas de Atajos (Hotkeys)
+## 4. Reglas de Atajos (Hotkeys)
 
-* **Combinaciones válidas:** Deben incluir al menos un modificador (`Ctrl`, `Alt`, `Shift`, `Win`) acompañado de una tecla, o una tecla de función (`F1`..`F24`) sola.
-* **Teclas individuales:** Letras o números solos (ej: `A`, `5`) son rechazados para evitar bloquear la escritura normal.
-* **Slots:** Máximo 10 frases activas por cada atajo de teclado.
+* **Combinaciones obligatorias:** Deben incluir al menos un modificador (`Ctrl`, `Alt`, `Shift`, `Win`) junto a una tecla, o una tecla de función (`F1`–`F24`) en solitario.
+* **Teclas individuales:** Letras o números solos (ej: `A`, `5`) son bloqueados para no interferir con la escritura estándar.
+* **Límite de Slots:** Máximo 10 frases activas por cada atajo de teclado.
 
 ---
 
-## 4. Ubicación de Archivos de Datos
+## 5. Notificaciones Toast Integradas
+
+La aplicación muestra feedback visual inmediato en la esquina inferior derecha ante:
+* Activación / Desactivación de una frase.
+* Creación y edición de frases.
+* Duplicación y eliminación.
+* Desplazamiento y guardado del orden de slots.
+* Modificaciones en el panel de Configuración.
+
+---
+
+## 6. Ubicación de Archivos de Datos y Logs
 
 ```text
 %APPDATA%\MisFrases\
-├── database\app.sqlite3   # Base de datos SQLite local
-├── logs\app.log           # Registro de eventos y errores
-└── backups\               # Directorio de respaldos
+├── database\app.sqlite3   # Base de datos SQLite local (WAL mode)
+├── logs\app.log           # Registro de auditoría y operaciones
+└── backups\               # Directorio reservado para respaldos
 ```

@@ -135,19 +135,38 @@ class MainApp {
     this.btnSaveReorder?.addEventListener('click', () => this.handleSaveReorder());
 
     // Settings switches
-    this.settingLaunchAtLogin?.addEventListener('change', () => {
-      window.appApi.settings.update({ launchAtLogin: this.settingLaunchAtLogin.checked });
+    this.settingLaunchAtLogin?.addEventListener('change', async () => {
+      const checked = this.settingLaunchAtLogin.checked;
+      await window.appApi.settings.update({ launchAtLogin: checked });
+      this.showToast(
+        checked ? 'Inicio con Windows activado' : 'Inicio con Windows desactivado',
+        'info'
+      );
     });
-    this.settingAdminMode?.addEventListener('change', () => {
-      window.appApi.settings.update({ administratorMode: this.settingAdminMode.checked });
+    this.settingAdminMode?.addEventListener('change', async () => {
+      const checked = this.settingAdminMode.checked;
+      await window.appApi.settings.update({ administratorMode: checked });
+      this.showToast(
+        checked ? 'Modo Administrador activado' : 'Modo Administrador desactivado',
+        'info'
+      );
     });
-    this.settingHotkeysEnabled?.addEventListener('change', () => {
+    this.settingHotkeysEnabled?.addEventListener('change', async () => {
       const enabled = this.settingHotkeysEnabled.checked;
-      window.appApi.settings.update({ hotkeysEnabled: enabled });
+      await window.appApi.settings.update({ hotkeysEnabled: enabled });
       this.updateStatusBadge(enabled);
+      this.showToast(
+        enabled ? 'Hotkeys globales activados' : 'Hotkeys globales pausados',
+        enabled ? 'success' : 'warning'
+      );
     });
-    this.settingStartHidden?.addEventListener('change', () => {
-      window.appApi.settings.update({ startHidden: this.settingStartHidden.checked });
+    this.settingStartHidden?.addEventListener('change', async () => {
+      const checked = this.settingStartHidden.checked;
+      await window.appApi.settings.update({ startHidden: checked });
+      this.showToast(
+        checked ? 'Inicio minimizado en bandeja activado' : 'Inicio minimizado desactivado',
+        'info'
+      );
     });
   }
 
@@ -257,7 +276,13 @@ class MainApp {
       el.addEventListener('change', async (e) => {
         const id = (e.target as HTMLElement).getAttribute('data-toggle-id')!;
         const checked = (e.target as HTMLInputElement).checked;
+        const current = this.snippets.find((s) => s.id === id);
+        const title = current ? current.title : 'Frase';
         await window.appApi.snippets.update({ id, enabled: checked });
+        this.showToast(
+          checked ? `Frase activada: "${title}"` : `Frase desactivada: "${title}"`,
+          checked ? 'success' : 'warning'
+        );
         await this.loadSnippets();
       });
     });
@@ -272,7 +297,8 @@ class MainApp {
     this.snippetsTbody.querySelectorAll('[data-duplicate-id]').forEach((el) => {
       el.addEventListener('click', async () => {
         const id = el.getAttribute('data-duplicate-id')!;
-        await window.appApi.snippets.duplicate(id);
+        const dup = await window.appApi.snippets.duplicate(id);
+        this.showToast(`Frase duplicada: "${dup.title}"`, 'success');
         await this.loadSnippets();
       });
     });
@@ -280,8 +306,11 @@ class MainApp {
     this.snippetsTbody.querySelectorAll('[data-delete-id]').forEach((el) => {
       el.addEventListener('click', async () => {
         const id = el.getAttribute('data-delete-id')!;
-        if (confirm('¿Deseas eliminar esta frase?')) {
+        const current = this.snippets.find((s) => s.id === id);
+        const title = current ? current.title : 'Frase';
+        if (confirm(`¿Deseas eliminar la frase "${title}"?`)) {
           await window.appApi.snippets.remove(id);
+          this.showToast(`Frase eliminada: "${title}"`, 'info');
           await this.loadSnippets();
         }
       });
@@ -403,6 +432,7 @@ class MainApp {
           slot,
           enabled
         });
+        this.showToast(`Frase "${title}" actualizada correctamente`, 'success');
       } else {
         await window.appApi.snippets.create({
           title,
@@ -411,12 +441,13 @@ class MainApp {
           slot,
           enabled
         });
+        this.showToast(`Nueva frase "${title}" guardada exitosamente`, 'success');
       }
 
       this.closeModal();
       await this.loadSnippets();
     } catch (err: any) {
-      alert(`Error al guardar frase: ${err.message || err}`);
+      this.showToast(`Error al guardar frase: ${err.message || err}`, 'error');
     }
   }
 
@@ -481,6 +512,7 @@ class MainApp {
           const temp = this.reorderItemsState[idx];
           this.reorderItemsState[idx] = this.reorderItemsState[idx - 1];
           this.reorderItemsState[idx - 1] = temp;
+          this.showToast(`Frase "${temp.title}" movida al slot ${idx}`, 'info', 2000);
           this.renderReorderList();
         }
       });
@@ -493,6 +525,7 @@ class MainApp {
           const temp = this.reorderItemsState[idx];
           this.reorderItemsState[idx] = this.reorderItemsState[idx + 1];
           this.reorderItemsState[idx + 1] = temp;
+          this.showToast(`Frase "${temp.title}" movida al slot ${idx + 2}`, 'info', 2000);
           this.renderReorderList();
         }
       });
@@ -510,11 +543,11 @@ class MainApp {
         orderedSnippetIds
       });
 
-      alert('Nuevo orden guardado exitosamente.');
+      this.showToast('Nuevo orden de slots guardado exitosamente', 'success');
       await this.loadSnippets();
       this.handleReorderHotkeyChange();
     } catch (err: any) {
-      alert(`Error al guardar orden: ${err.message || err}`);
+      this.showToast(`Error al guardar orden: ${err.message || err}`, 'error');
     }
   }
 
@@ -568,6 +601,39 @@ class MainApp {
       this.statusIndicator.className = 'status-indicator paused';
       this.statusText.textContent = 'Hotkeys pausados';
     }
+  }
+
+  private showToast(
+    message: string,
+    type: 'success' | 'info' | 'warning' | 'error' = 'info',
+    durationMs = 3000
+  ): void {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    const icons: Record<string, string> = {
+      success: '✓',
+      info: 'ℹ',
+      warning: '⚠️',
+      error: '✕'
+    };
+
+    toast.innerHTML = `
+      <span class="toast-icon">${icons[type] || 'ℹ'}</span>
+      <span class="toast-message">${this.escapeHtml(message)}</span>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add('toast-hide');
+      setTimeout(() => {
+        toast.remove();
+      }, 250);
+    }, durationMs);
   }
 
   private escapeHtml(text: string): string {

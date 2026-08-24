@@ -28,7 +28,7 @@ bun run build
 # 7. Ejecutar Spike P0 (validación aislada de Win32/Koffi/SendInput)
 bun run spike
 
-# 8. Empaquetar ejecutable autónomo (.exe portable en release-package/)
+# 8. Empaquetar ejecutable autónomo (.exe portable en release/)
 bun run package
 
 # 9. Generar instalador de Windows (Setup.exe)
@@ -40,7 +40,7 @@ bun run make
 ## 2. Diferencia entre Carpetas de Salida
 
 * **`dist/`**: Código JavaScript compilado y assets estáticos. Utilizado directamente por `bun run dev`.
-* **`release-package/`**: Ejecutable final distribuible (`release-package\MisFrases-win32-x64\mis-frases.exe`) con runtime de Chromium y DLLs nativas empaquetadas.
+* **`release/`**: Ejecutable final distribuible (`release\MisFrases-win32-x64\mis-frases.exe`) con runtime de Chromium y DLLs nativas empaquetadas.
 
 ---
 

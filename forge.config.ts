@@ -4,7 +4,7 @@ import { MakerZIP } from '@electron-forge/maker-zip';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 
 const config: ForgeConfig = {
-  outDir: 'release-package',
+  outDir: 'release',
   packagerConfig: {
     asar: true,
     prune: true,

@@ -10,8 +10,8 @@
     "test": "bun test",
     "spike": "bun scripts/p0-spike.ts",
     "start": "electron .",
-    "package": "bun scripts/build.ts && electron-forge package",
-    "make": "bun scripts/build.ts && electron-forge make"
+    "package": "bun scripts/clean-process.ts && bun scripts/build.ts && electron-forge package",
+    "make": "bun scripts/clean-process.ts && bun scripts/build.ts && electron-forge make"
   },
   "keywords": [
     "snippets",

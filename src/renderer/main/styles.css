@@ -424,8 +424,11 @@ body {
   background-color: var(--bg-sidebar);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  width: 520px;
-  max-width: 90vw;
+  width: 540px;
+  max-width: 92vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
@@ -436,6 +439,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -449,13 +453,16 @@ body {
   color: var(--text-muted);
   font-size: 22px;
   cursor: pointer;
+  padding: 0 4px;
 }
 
 form {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  overflow-y: auto;
+  max-height: calc(90vh - 65px);
 }
 
 .form-group {
@@ -485,6 +492,27 @@ form {
   font-size: 13px;
   outline: none;
   font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+  max-height: 240px;
+  line-height: 1.4;
+}
+
+#form-description {
+  resize: none;
+  min-height: 52px;
+  max-height: 80px;
+}
+
+#form-content {
+  resize: vertical;
+  min-height: 110px;
+  max-height: 260px;
 }
 
 .form-group input[type="text"]:focus,

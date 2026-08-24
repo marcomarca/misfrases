@@ -126,11 +126,34 @@ class MainApp {
     // Modal
     document.getElementById('btn-close-modal')?.addEventListener('click', () => this.closeModal());
     document.getElementById('btn-cancel-modal')?.addEventListener('click', () => this.closeModal());
+    this.modal?.addEventListener('click', (e) => {
+      if (e.target === this.modal) {
+        this.closeModal();
+      }
+    });
     this.snippetForm?.addEventListener('submit', (e) => this.handleSaveSnippet(e));
 
     // Hotkey recorder
     this.btnRecordHotkey?.addEventListener('click', () => this.startRecordingHotkey());
-    window.addEventListener('keydown', (e) => this.handleKeyDown(e));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (this.isRecordingHotkey) {
+          this.isRecordingHotkey = false;
+          this.hotkeyDisplay.classList.remove('recording');
+          this.hotkeyFeedback.textContent = 'Grabación cancelada.';
+          this.hotkeyFeedback.className = 'form-hint';
+          window.appApi.hotkeys.stopRecording();
+          e.preventDefault();
+          return;
+        }
+        if (!this.modal.classList.contains('hidden')) {
+          this.closeModal();
+          e.preventDefault();
+          return;
+        }
+      }
+      this.handleKeyDown(e);
+    });
 
     // Reorder
     this.reorderHotkeySelect?.addEventListener('change', () => this.handleReorderHotkeyChange());
@@ -336,6 +359,10 @@ class MainApp {
     this.formTitle.value = '';
     this.formDescription.value = '';
     this.formContent.value = '';
+    this.formContent.style.height = '';
+    this.formContent.style.width = '';
+    this.formDescription.style.height = '';
+    this.formDescription.style.width = '';
     this.formAccelerator.value = 'Control+Alt+P';
     this.hotkeyDisplay.textContent = 'Control+Alt+P';
     this.formSlot.value = '';
@@ -355,6 +382,10 @@ class MainApp {
     this.formTitle.value = snippet.title;
     this.formDescription.value = snippet.description || '';
     this.formContent.value = snippet.content;
+    this.formContent.style.height = '';
+    this.formContent.style.width = '';
+    this.formDescription.style.height = '';
+    this.formDescription.style.width = '';
     this.formAccelerator.value = snippet.accelerator || 'Control+Alt+P';
     this.hotkeyDisplay.textContent = snippet.accelerator || 'Control+Alt+P';
     this.formSlot.value = snippet.slot.toString();
@@ -371,6 +402,10 @@ class MainApp {
       this.hotkeyDisplay.classList.remove('recording');
       window.appApi.hotkeys.stopRecording();
     }
+    this.formContent.style.height = '';
+    this.formContent.style.width = '';
+    this.formDescription.style.height = '';
+    this.formDescription.style.width = '';
   }
 
   private async startRecordingHotkey(): Promise<void> {

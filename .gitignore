@@ -3,6 +3,7 @@ dist/
 out/
 release/
 release-bin/
+release-app/
 .vite/
 *.log
 .DS_Store

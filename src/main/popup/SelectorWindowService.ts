@@ -34,7 +34,7 @@ export class SelectorWindowService {
       this.window.destroy();
     }
 
-    const popupWidth = 340;
+    const popupWidth = 390;
     // Calculate approximate height: header + item height * count + padding
     const itemHeight = 44;
     const headerHeight = 48;

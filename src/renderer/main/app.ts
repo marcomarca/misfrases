@@ -535,49 +535,126 @@ class MainApp {
     this.renderReorderList();
   }
 
+  private draggedReorderIndex: number | null = null;
+
   private renderReorderList(): void {
     this.reorderList.innerHTML = '';
 
     this.reorderItemsState.forEach((snippet, index) => {
       const div = document.createElement('div');
       div.className = 'reorder-item';
+      div.setAttribute('draggable', 'true');
+      div.dataset.index = index.toString();
+
+      const descHtml = snippet.description
+        ? `<div class="reorder-desc">${this.escapeHtml(snippet.description)}</div>`
+        : '';
 
       div.innerHTML = `
+        <div class="reorder-drag-handle" title="Arrastrar para mover">⋮⋮</div>
         <span class="slot-badge">${index + 1 === 10 ? '0' : index + 1}</span>
         <div class="reorder-info">
           <div class="reorder-title">${this.escapeHtml(snippet.title)}</div>
+          ${descHtml}
           <div class="reorder-stats">${snippet.usageCount} usos</div>
         </div>
         <div class="reorder-buttons">
-          <button class="btn-icon" data-move-up="${index}" ${index === 0 ? 'disabled' : ''}>▲</button>
-          <button class="btn-icon" data-move-down="${index}" ${index === this.reorderItemsState.length - 1 ? 'disabled' : ''}>▼</button>
+          <button class="btn-icon" data-move-up="${index}" ${index === 0 ? 'disabled' : ''} title="Subir">▲</button>
+          <button class="btn-icon" data-move-down="${index}" ${index === this.reorderItemsState.length - 1 ? 'disabled' : ''} title="Bajar">▼</button>
         </div>
       `;
+
+      // Drag and Drop Events
+      div.addEventListener('dragstart', (e) => {
+        this.draggedReorderIndex = index;
+        div.classList.add('dragging');
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', index.toString());
+        }
+      });
+
+      div.addEventListener('dragend', () => {
+        div.classList.remove('dragging');
+        this.reorderList.querySelectorAll('.reorder-item').forEach((el) => {
+          el.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+        this.draggedReorderIndex = null;
+      });
+
+      div.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (this.draggedReorderIndex === null || this.draggedReorderIndex === index) return;
+
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = 'move';
+        }
+
+        const rect = div.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+
+        if (e.clientY < midY) {
+          div.classList.add('drag-over-top');
+          div.classList.remove('drag-over-bottom');
+        } else {
+          div.classList.add('drag-over-bottom');
+          div.classList.remove('drag-over-top');
+        }
+      });
+
+      div.addEventListener('dragleave', () => {
+        div.classList.remove('drag-over-top', 'drag-over-bottom');
+      });
+
+      div.addEventListener('drop', (e) => {
+        e.preventDefault();
+        div.classList.remove('drag-over-top', 'drag-over-bottom');
+
+        if (this.draggedReorderIndex === null || this.draggedReorderIndex === index) return;
+
+        const rect = div.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        let targetIndex = index;
+
+        if (e.clientY >= midY && this.draggedReorderIndex < index) {
+          targetIndex = index;
+        } else if (e.clientY < midY && this.draggedReorderIndex > index) {
+          targetIndex = index;
+        }
+
+        const [movedItem] = this.reorderItemsState.splice(this.draggedReorderIndex, 1);
+        this.reorderItemsState.splice(targetIndex, 0, movedItem);
+
+        this.showToast(`Frase "${movedItem.title}" reubicada al slot ${targetIndex + 1}`, 'info', 1800);
+        this.renderReorderList();
+      });
 
       this.reorderList.appendChild(div);
     });
 
     this.reorderList.querySelectorAll('[data-move-up]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const idx = parseInt(btn.getAttribute('data-move-up')!, 10);
         if (idx > 0) {
           const temp = this.reorderItemsState[idx];
           this.reorderItemsState[idx] = this.reorderItemsState[idx - 1];
           this.reorderItemsState[idx - 1] = temp;
-          this.showToast(`Frase "${temp.title}" movida al slot ${idx}`, 'info', 2000);
+          this.showToast(`Frase "${temp.title}" movida al slot ${idx}`, 'info', 1800);
           this.renderReorderList();
         }
       });
     });
 
     this.reorderList.querySelectorAll('[data-move-down]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const idx = parseInt(btn.getAttribute('data-move-down')!, 10);
         if (idx < this.reorderItemsState.length - 1) {
           const temp = this.reorderItemsState[idx];
           this.reorderItemsState[idx] = this.reorderItemsState[idx + 1];
           this.reorderItemsState[idx + 1] = temp;
-          this.showToast(`Frase "${temp.title}" movida al slot ${idx + 2}`, 'info', 2000);
+          this.showToast(`Frase "${temp.title}" movida al slot ${idx + 2}`, 'info', 1800);
           this.renderReorderList();
         }
       });

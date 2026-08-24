@@ -54,6 +54,7 @@ const distRenderer = path.join(__dirname, '../dist/renderer');
 if (fs.existsSync(srcRenderer)) {
   fs.cpSync(srcRenderer, distRenderer, {
     recursive: true,
+    force: true,
     filter: (src) => !src.endsWith('.ts')
   });
 }

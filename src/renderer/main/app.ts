@@ -608,8 +608,13 @@ class MainApp {
     type: 'success' | 'info' | 'warning' | 'error' = 'info',
     durationMs = 3000
   ): void {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
+    let container = document.getElementById('toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toast-container';
+      container.className = 'toast-container';
+      document.body.appendChild(container);
+    }
 
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;

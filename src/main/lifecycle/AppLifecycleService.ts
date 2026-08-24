@@ -206,8 +206,8 @@ export class AppLifecycleService {
       }
     });
 
-    // Handle dev tools shortcut in development
-    if (!app.isPackaged) {
+    // Handle dev tools shortcut in development or when launched with --debug
+    if (!app.isPackaged || process.argv.includes('--debug')) {
       this.mainWindow.webContents.on('before-input-event', (event, input) => {
         if (input.key === 'F12' && input.type === 'keyDown') {
           this.mainWindow?.webContents.toggleDevTools();

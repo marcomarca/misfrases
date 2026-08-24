@@ -1,5 +1,6 @@
-import { BrowserWindow, app, shell } from 'electron';
+import fs from 'node:fs';
 import path from 'node:path';
+import { BrowserWindow, app, shell } from 'electron';
 import { AppDatabase } from '../database/Database';
 import { HotkeyRepository } from '../database/repositories/HotkeyRepository';
 import { SnippetRepository } from '../database/repositories/SnippetRepository';
@@ -163,6 +164,21 @@ export class AppLifecycleService {
   }
 
   private createMainWindow(): void {
+    const possibleIconPaths = [
+      path.join(__dirname, '../../../windows/icon.ico'),
+      path.join(__dirname, '../../windows/icon.ico'),
+      path.join(__dirname, '../../../windows/app_png/icon-256x256.png'),
+      path.join(__dirname, '../../windows/app_png/icon-256x256.png'),
+      path.join(process.resourcesPath, 'windows/icon.ico')
+    ];
+    let appIconPath: string | undefined;
+    for (const p of possibleIconPaths) {
+      if (fs.existsSync(p)) {
+        appIconPath = p;
+        break;
+      }
+    }
+
     this.mainWindow = new BrowserWindow({
       width: 960,
       height: 680,
@@ -170,6 +186,7 @@ export class AppLifecycleService {
       minHeight: 520,
       show: false,
       title: 'Mis Frases',
+      icon: appIconPath,
       autoHideMenuBar: true,
       webPreferences: {
         preload: path.join(__dirname, '../../preload/preload.js'),

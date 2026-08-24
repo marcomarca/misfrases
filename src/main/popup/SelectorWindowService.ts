@@ -1,5 +1,6 @@
-import { BrowserWindow, screen } from 'electron';
+import fs from 'node:fs';
 import path from 'node:path';
+import { BrowserWindow, screen } from 'electron';
 import type { Snippet, WindowHandle } from '../../shared/types';
 
 export class SelectorWindowService {
@@ -55,6 +56,21 @@ export class SelectorWindowService {
     x = Math.max(area.x, Math.min(x, area.x + area.width - popupWidth));
     y = Math.max(area.y, Math.min(y, area.y + area.height - popupHeight));
 
+    const possibleIconPaths = [
+      path.join(__dirname, '../../../windows/icon.ico'),
+      path.join(__dirname, '../../windows/icon.ico'),
+      path.join(__dirname, '../../../windows/app_png/icon-256x256.png'),
+      path.join(__dirname, '../../windows/app_png/icon-256x256.png'),
+      path.join(process.resourcesPath, 'windows/icon.ico')
+    ];
+    let iconPath: string | undefined;
+    for (const p of possibleIconPaths) {
+      if (fs.existsSync(p)) {
+        iconPath = p;
+        break;
+      }
+    }
+
     this.window = new BrowserWindow({
       width: popupWidth,
       height: popupHeight,
@@ -68,6 +84,7 @@ export class SelectorWindowService {
       alwaysOnTop: true,
       focusable: true,
       show: false,
+      icon: iconPath,
       webPreferences: {
         preload: path.join(__dirname, '../../preload/preload.js'),
         nodeIntegration: false,

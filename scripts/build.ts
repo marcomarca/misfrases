@@ -59,4 +59,21 @@ if (fs.existsSync(srcRenderer)) {
   });
 }
 
+console.log('Copying windows branding and icon assets...');
+const windowsDir = path.join(__dirname, '../windows');
+const distWindowsDir = path.join(__dirname, '../dist/windows');
+const mainAssetsDir = path.join(__dirname, '../dist/renderer/main/assets');
+const selectorAssetsDir = path.join(__dirname, '../dist/renderer/selector/assets');
+
+if (fs.existsSync(windowsDir)) {
+  fs.cpSync(windowsDir, distWindowsDir, { recursive: true, force: true });
+
+  // Copy app_png icons to renderer assets for web display
+  const appPngDir = path.join(windowsDir, 'app_png');
+  if (fs.existsSync(appPngDir)) {
+    fs.cpSync(appPngDir, mainAssetsDir, { recursive: true, force: true });
+    fs.cpSync(appPngDir, selectorAssetsDir, { recursive: true, force: true });
+  }
+}
+
 console.log('Build completed successfully.');

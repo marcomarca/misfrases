@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { Menu, Tray, nativeImage } from 'electron';
 import type { AppSettings } from '../../shared/types';
 
@@ -76,14 +78,38 @@ export class TrayService {
   }
 
   private createTrayIcon(): Electron.NativeImage {
-    // 16x16 icon in base64 data URI format (blue/cyan clean circle with text 'F')
+    // 1. Try Windows tray icon paths
+    const possiblePaths = [
+      path.join(__dirname, '../../../windows/tray/tray.ico'),
+      path.join(__dirname, '../../windows/tray/tray.ico'),
+      path.join(__dirname, '../../../windows/tray/electron_scale_assets/tray.png'),
+      path.join(__dirname, '../../windows/tray/electron_scale_assets/tray.png'),
+      path.join(__dirname, '../../../windows/app_png/icon-32x32.png'),
+      path.join(__dirname, '../../windows/app_png/icon-32x32.png'),
+      path.join(process.resourcesPath, 'windows/tray/tray.ico'),
+      path.join(process.resourcesPath, 'windows/tray/electron_scale_assets/tray.png')
+    ];
+
+    for (const iconPath of possiblePaths) {
+      try {
+        if (fs.existsSync(iconPath)) {
+          const img = nativeImage.createFromPath(iconPath);
+          if (!img.isEmpty()) {
+            return img;
+          }
+        }
+      } catch {
+        // Continue to fallback
+      }
+    }
+
+    // Fallback SVG
     const svgIcon = `
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
         <rect width="16" height="16" rx="4" fill="#3B82F6"/>
         <path d="M4 3.5h7v2.2H6.6v2.3h4v2.2h-4v3.3H4z" fill="#FFFFFF"/>
       </svg>
     `;
-    const buffer = Buffer.from(svgIcon);
-    return nativeImage.createFromBuffer(buffer);
+    return nativeImage.createFromBuffer(Buffer.from(svgIcon));
   }
 }

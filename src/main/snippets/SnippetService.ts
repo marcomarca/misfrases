@@ -38,6 +38,7 @@ export class SnippetService {
     const snippet = this.snippetRepo.create({
       hotkeyGroupId: group.id,
       title: input.title,
+      description: input.description,
       content: input.content,
       slot: input.slot,
       enabled: input.enabled !== undefined ? input.enabled : true
@@ -76,6 +77,7 @@ export class SnippetService {
       id: input.id,
       hotkeyGroupId: targetGroupId,
       title: input.title,
+      description: input.description,
       content: input.content,
       slot: input.slot,
       enabled: input.enabled
@@ -110,6 +112,7 @@ export class SnippetService {
 
     return this.create({
       title: `${original.title} (Copia)`,
+      description: original.description,
       content: original.content,
       accelerator: original.accelerator,
       enabled: original.enabled

@@ -143,6 +143,37 @@ describe('Database Repositories', () => {
     expect(summary.last30DaysExpansions).toBe(2);
   });
 
+  test('SnippetService creates, updates, and duplicates snippets with description', () => {
+    const fakeHotkeyService = {
+      register: () => true,
+      unregister: () => true,
+      rebuildAll: () => {},
+      validateHotkey: () => ({ valid: true })
+    } as any;
+
+    const { SnippetService } = require('../../src/main/snippets/SnippetService');
+    const service = new SnippetService(snippetRepo, hotkeyRepo, fakeHotkeyService);
+
+    const created = service.create({
+      title: 'Prompt SQL',
+      description: 'Optimización de consultas lentas',
+      content: 'SELECT * FROM users;',
+      accelerator: 'Control+Alt+Q'
+    });
+
+    expect(created.description).toBe('Optimización de consultas lentas');
+
+    const updated = service.update({
+      id: created.id,
+      description: 'Nueva descripción actualizada'
+    });
+    expect(updated.description).toBe('Nueva descripción actualizada');
+
+    const duplicate = service.duplicate(created.id);
+    expect(duplicate.description).toBe('Nueva descripción actualizada');
+    expect(duplicate.title).toBe('Prompt SQL (Copia)');
+  });
+
   test('persists and loads settings', () => {
     const initial = settingsRepo.getSettings();
     expect(initial.launchAtLogin).toBe(false);

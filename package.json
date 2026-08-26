@@ -19,7 +19,7 @@
     "electron",
     "windows"
   ],
-  "author": "",
+  "author": "marcomarca <timburtonmarco@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^11.8.1",

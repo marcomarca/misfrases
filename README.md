@@ -127,3 +127,10 @@ Los datos persistentes de la aplicación se almacenan en:
 ## 📄 Licencia
 
 Este proyecto está bajo la Licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+
+---
+
+## 📜 Historial de Versiones
+
+Para consultar el detalle de cambios, correcciones y novedades de cada versión, revisa el archivo [CHANGELOG.md](CHANGELOG.md).
+

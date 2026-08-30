@@ -1,6 +1,6 @@
 {
   "name": "mis-frases",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Windows Snippet & Prompt Manager",
   "main": "dist/main/main.js",
   "scripts": {

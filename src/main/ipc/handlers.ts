@@ -14,6 +14,7 @@ import type { SettingsRepository } from '../database/repositories/SettingsReposi
 import type { ExpansionService } from '../expansion/ExpansionService';
 import type { SelectorWindowService } from '../popup/SelectorWindowService';
 import type { TrayService } from '../tray/TrayService';
+import { LoginItemService } from '../lifecycle/LoginItemService';
 
 export interface IpcServices {
   snippetService: SnippetService;
@@ -103,15 +104,7 @@ export function registerIpcHandlers(services: IpcServices): void {
     }
 
     if (validated.launchAtLogin !== undefined || validated.startHidden !== undefined) {
-      try {
-        const { app } = require('electron');
-        app.setLoginItemSettings({
-          openAtLogin: updated.launchAtLogin,
-          openAsHidden: updated.startHidden
-        });
-      } catch (err) {
-        console.warn('Could not update login item settings:', err);
-      }
+      LoginItemService.apply(updated);
     }
 
     return updated;

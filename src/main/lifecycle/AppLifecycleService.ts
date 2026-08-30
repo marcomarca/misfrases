@@ -15,6 +15,7 @@ import { ExpansionService } from '../expansion/ExpansionService';
 import { SnippetService } from '../snippets/SnippetService';
 import { TrayService } from '../tray/TrayService';
 import { SingleInstanceService } from './SingleInstanceService';
+import { LoginItemService } from './LoginItemService';
 import { AdministratorService } from '../windows/AdministratorService';
 import { registerIpcHandlers } from '../ipc/handlers';
 import { LoggerService } from '../logging/LoggerService';
@@ -77,14 +78,7 @@ export class AppLifecycleService {
     }
 
     // 5. Apply login item settings
-    try {
-      app.setLoginItemSettings({
-        openAtLogin: settings.launchAtLogin,
-        openAsHidden: settings.startHidden
-      });
-    } catch (err) {
-      console.warn('Could not set login item settings:', err);
-    }
+    LoginItemService.apply(settings);
 
     // 6. Initialize services
     this.hotkeyService = new HotkeyService(this.hotkeyRepo, this.snippetRepo);

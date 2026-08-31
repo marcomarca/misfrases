@@ -8,6 +8,7 @@
     "build": "bun scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "benchmark": "bun scripts/build.ts && tsx tests/benchmarks/run-all.ts",
     "spike": "bun scripts/p0-spike.ts",
     "start": "electron .",
     "package": "bun scripts/clean-process.ts && bun scripts/build.ts && electron-forge package",
@@ -36,6 +37,8 @@
     "@types/bun": "^1.2.0",
     "@types/node": "^22.13.4",
     "electron": "^34.2.0",
+    "playwright": "^1.62.1",
+    "tsx": "^4.23.13",
     "typescript": "^5.7.3"
   }
 }

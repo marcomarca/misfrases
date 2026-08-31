@@ -134,3 +134,10 @@ Este proyecto está bajo la Licencia **MIT**. Consulta el archivo [LICENSE](LICE
 
 Para consultar el detalle de cambios, correcciones y novedades de cada versión, revisa el archivo [CHANGELOG.md](CHANGELOG.md).
 
+---
+
+## 🗺️ Roadmap y Futuras Mejoras
+
+Para ver o proponer nuevas funcionalidades pendientes, consulta el archivo [BACKLOG.md](BACKLOG.md).
+
+

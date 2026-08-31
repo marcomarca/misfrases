@@ -2,6 +2,7 @@ import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
+import { PublisherGithub } from '@electron-forge/publisher-github';
 
 const config: ForgeConfig = {
   outDir: 'release',
@@ -34,6 +35,16 @@ const config: ForgeConfig = {
       setupIcon: './src/assets/icon.ico'
     }),
     new MakerZIP({}, ['win32'])
+  ],
+  publishers: [
+    new PublisherGithub({
+      repository: {
+        owner: 'marcomarca',
+        name: 'misfrases'
+      },
+      prerelease: false,
+      draft: false
+    })
   ],
   plugins: [
     new AutoUnpackNativesPlugin({})

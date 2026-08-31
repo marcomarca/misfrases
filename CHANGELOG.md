@@ -13,6 +13,10 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 - **Prevención de pantalla por defecto de Electron al reiniciar:** Se implementó `LoginItemService` para evitar que ejecuciones en modo desarrollo registren el binario base `node_modules\electron\dist\electron.exe` sin argumentos en el arranque de Windows, corrigiendo la aparición no deseada del panel de bienvenida de Electron tras reiniciar el equipo.
 - **Aislamiento seguro de auto-inicio:** La configuración de inicio automático ahora solo se inyecta en el registro del sistema operativo cuando la aplicación se ejecuta empaquetada (`app.isPackaged`).
 
+### ✨ Añadido (Added)
+- **Servicio de Actualización Automática Silenciosa (`AutoUpdateService`):** Integración con GitHub Releases y `update-electron-app` para comprobar y descargar actualizaciones en segundo plano cada 2 horas sin interrumpir el flujo de trabajo del usuario.
+- **Suite de Pruebas de Rendimiento:** Pruebas automatizadas con Playwright y benchmarking de SQLite y pipeline de expansión de texto (`bun run benchmark`).
+
 ---
 
 ## [1.0.0] - 2026-08-28

@@ -78,6 +78,10 @@ export class LoggerService {
     this.log(category, message, meta);
   }
 
+  public warn(category: string, message: string, meta?: Record<string, any>): void {
+    this.log(`WARN:${category}`, message, meta);
+  }
+
   public error(category: string, message: string, error?: any, meta?: Record<string, any>): void {
     const errDetails = error instanceof Error ? { errorName: error.name, errorMessage: error.message } : { error };
     this.log(category, message, { ...errDetails, ...meta });

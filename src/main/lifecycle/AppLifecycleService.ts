@@ -16,6 +16,7 @@ import { SnippetService } from '../snippets/SnippetService';
 import { TrayService } from '../tray/TrayService';
 import { SingleInstanceService } from './SingleInstanceService';
 import { LoginItemService } from './LoginItemService';
+import { AutoUpdateService } from './AutoUpdateService';
 import { AdministratorService } from '../windows/AdministratorService';
 import { registerIpcHandlers } from '../ipc/handlers';
 import { LoggerService } from '../logging/LoggerService';
@@ -146,6 +147,9 @@ export class AppLifecycleService {
     if (!isStartupLaunch) {
       this.showMainWindow();
     }
+
+    // 11. Start background auto-updates
+    AutoUpdateService.init();
 
     // Handle app termination signals
     app.on('before-quit', () => {

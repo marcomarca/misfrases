@@ -46,8 +46,8 @@
 
 1. **Clonar el repositorio:**
    ```bash
-   git clone https://github.com/marcomarca/mis-frases.git
-   cd mis-frases
+   git clone https://github.com/marcomarca/misfrases.git
+   cd misfrases
    ```
 
 2. **Instalar dependencias:**

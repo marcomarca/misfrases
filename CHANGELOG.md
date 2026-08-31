@@ -6,6 +6,15 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.0.2] - 2026-08-31
+
+### ✨ Añadido (Added)
+- **Sistema Integral de Auto-Actualización Silenciosa:** Integración de `update-electron-app` y `AutoUpdateService` para descargas automáticas de versiones en segundo plano desde GitHub Releases.
+- **Gestión de Releases con Squirrel:** Publicación automática de índices `RELEASES` y paquetes `.nupkg` para actualizaciones delta eficientes.
+- **Estandarización y Skills:** Inclusión de reglas de repositorio y skill `auto-update-and-release` para preservar la coherencia del ciclo de vida y distribución del software.
+
+---
+
 ## [1.0.1] - 2026-08-30
 
 ### 🐛 Corregido (Fixed)

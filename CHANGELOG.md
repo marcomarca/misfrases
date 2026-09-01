@@ -6,6 +6,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.1.1] - 2026-08-31
+
+### 🐛 Corregido (Fixed)
+- **Comprobación de Actualizaciones en Modo Portable y Desempaquetado:** Se implementó `isSquirrelInstalled()` y fallback directo a la API de GitHub Releases vía HTTPS, resolviendo el error `Can not find Squirrel` al ejecutar la aplicación desde carpetas portables o compilaciones independientes sin instalador.
+
+---
+
 ## [1.1.0] - 2026-08-31
 
 ### ✨ Añadido (Added)

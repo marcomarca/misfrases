@@ -173,4 +173,35 @@ export function registerIpcHandlers(services: IpcServices): void {
     const win = services.getMainWindow ? services.getMainWindow() : null;
     return services.backupService.importFromFile(win, mode);
   });
+
+  // Window Controls
+  ipcMain.handle(IPC_CHANNELS.WINDOW_MINIMIZE, async () => {
+    const win = services.getMainWindow ? services.getMainWindow() : null;
+    win?.minimize();
+    return { success: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_MAXIMIZE, async () => {
+    const win = services.getMainWindow ? services.getMainWindow() : null;
+    if (win) {
+      if (win.isMaximized()) {
+        win.unmaximize();
+      } else {
+        win.maximize();
+      }
+      return { isMaximized: win.isMaximized() };
+    }
+    return { isMaximized: false };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_CLOSE, async () => {
+    const win = services.getMainWindow ? services.getMainWindow() : null;
+    win?.close();
+    return { success: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_IS_MAXIMIZED, async () => {
+    const win = services.getMainWindow ? services.getMainWindow() : null;
+    return { isMaximized: win?.isMaximized() ?? false };
+  });
 }

@@ -196,6 +196,8 @@ export class AppLifecycleService {
       title: 'Mis Frases',
       icon: appIconPath,
       autoHideMenuBar: true,
+      frame: false,
+      titleBarStyle: 'hidden',
       webPreferences: {
         preload: path.join(__dirname, '../../preload/preload.js'),
         nodeIntegration: false,

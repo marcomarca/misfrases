@@ -113,6 +113,22 @@ class MainApp {
   }
 
   private initEventListeners(): void {
+    // Window Controls
+    const btnMin = document.getElementById('win-btn-minimize');
+    const btnMax = document.getElementById('win-btn-maximize');
+    const btnClose = document.getElementById('win-btn-close');
+
+    btnMin?.addEventListener('click', () => window.appApi.window.minimize());
+    btnMax?.addEventListener('click', async () => {
+      const res = await window.appApi.window.maximize();
+      this.updateMaximizeIcon(res.isMaximized);
+    });
+    btnClose?.addEventListener('click', () => window.appApi.window.close());
+
+    window.appApi.window.isMaximized().then((res) => {
+      this.updateMaximizeIcon(res.isMaximized);
+    });
+
     // Navigation
     this.navButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -213,6 +229,34 @@ class MainApp {
     });
 
     // Variable Chips in snippet modal
+    const updateChipPreviews = () => {
+      const now = new Date();
+      const year = now.getFullYear().toString();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const seconds = now.getSeconds().toString().padStart(2, '0');
+
+      const dateStr = `${year}-${month}-${day}`;
+      const timeStr = `${hours}:${minutes}:${seconds}`;
+      const datetimeStr = `${dateStr} ${timeStr}`;
+
+      document.querySelectorAll<HTMLElement>('.preview-val[data-val-type]').forEach((el) => {
+        const type = el.dataset.valType;
+        if (type === 'date') el.textContent = dateStr;
+        else if (type === 'time') el.textContent = timeStr;
+        else if (type === 'datetime') el.textContent = datetimeStr;
+        else if (type === 'year') el.textContent = year;
+        else if (type === 'month') el.textContent = month;
+        else if (type === 'day') el.textContent = day;
+      });
+    };
+
+    document.querySelectorAll('.chip-wrapper').forEach((wrapper) => {
+      wrapper.addEventListener('mouseenter', updateChipPreviews);
+    });
+
     document.querySelectorAll('.chip-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const varTag = btn.getAttribute('data-var');
@@ -666,8 +710,12 @@ class MainApp {
           <div class="reorder-stats">${snippet.usageCount} usos</div>
         </div>
         <div class="reorder-buttons">
-          <button class="btn-icon" data-move-up="${index}" ${index === 0 ? 'disabled' : ''} title="Subir">▲</button>
-          <button class="btn-icon" data-move-down="${index}" ${index === this.reorderItemsState.length - 1 ? 'disabled' : ''} title="Bajar">▼</button>
+          <button class="reorder-action-btn" data-move-up="${index}" ${index === 0 ? 'disabled' : ''} title="Subir">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+          </button>
+          <button class="reorder-action-btn" data-move-down="${index}" ${index === this.reorderItemsState.length - 1 ? 'disabled' : ''} title="Bajar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
         </div>
       `;
 
@@ -854,6 +902,15 @@ class MainApp {
       document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
     } else {
       document.documentElement.dataset.theme = theme;
+    }
+  }
+
+  private updateMaximizeIcon(isMaximized: boolean): void {
+    const maxIcon = document.querySelector('.win-btn .icon-max');
+    const restoreIcon = document.querySelector('.win-btn .icon-restore');
+    if (maxIcon && restoreIcon) {
+      maxIcon.classList.toggle('hidden', isMaximized);
+      restoreIcon.classList.toggle('hidden', !isMaximized);
     }
   }
 

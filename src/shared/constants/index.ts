@@ -40,7 +40,13 @@ export const IPC_CHANNELS = {
 
   // Backup
   BACKUP_EXPORT: 'backup:export',
-  BACKUP_IMPORT: 'backup:import'
+  BACKUP_IMPORT: 'backup:import',
+
+  // Window Controls
+  WINDOW_MINIMIZE: 'window:minimize',
+  WINDOW_MAXIMIZE: 'window:maximize',
+  WINDOW_CLOSE: 'window:close',
+  WINDOW_IS_MAXIMIZED: 'window:is-maximized'
 } as const;
 
 export const DEFAULT_SETTINGS = {

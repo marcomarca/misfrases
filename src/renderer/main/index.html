@@ -9,8 +9,31 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Sidebar / Navigation (Super Whisper Style) -->
-    <aside class="sidebar">
+    <!-- Custom Window Titlebar (Super Whisper Style) -->
+    <div class="window-titlebar">
+      <div class="titlebar-drag-region">
+        <div class="titlebar-app-icon">
+          <img src="assets/icon-32x32.png" alt="Icon">
+        </div>
+        <span class="titlebar-title">Mis Frases</span>
+      </div>
+      <div class="window-controls">
+        <button class="win-btn win-minimize" id="win-btn-minimize" title="Minimizar" aria-label="Minimizar">
+          <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+        </button>
+        <button class="win-btn win-maximize" id="win-btn-maximize" title="Maximizar" aria-label="Maximizar">
+          <svg class="icon-max" width="10" height="10" viewBox="0 0 10 10"><path d="M1 1v8h8V1H1zm7 7H2V2h6v6z" fill="currentColor"/></svg>
+          <svg class="icon-restore hidden" width="10" height="10" viewBox="0 0 10 10"><path d="M3 1v2H1v6h6V7h2V1H3zm3 7H2V4h4v4zm2-2H7V3H4V2h4v4z" fill="currentColor"/></svg>
+        </button>
+        <button class="win-btn win-close" id="win-btn-close" title="Cerrar" aria-label="Cerrar">
+          <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 0L0 1l4 4-4 4 1 1 4-4 4 4 1-1-4-4 4-4-1-1-4 4-4-4z" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="app-body">
+      <!-- Sidebar / Navigation (Super Whisper Style) -->
+      <aside class="sidebar">
       <div class="brand">
         <div class="brand-logo-wrapper">
           <img src="assets/icon-48x48.png" alt="Logo" class="brand-logo">
@@ -367,6 +390,7 @@
       </section>
     </main>
   </div>
+</div>
 
   <!-- Create / Edit Modal -->
   <div class="modal-backdrop hidden" id="snippet-modal">
@@ -433,13 +457,68 @@
             <span class="form-hint-inline">Variables dinámicas:</span>
           </div>
           <div class="variable-chips">
-            <button type="button" class="chip-btn" data-var="{{date}}" title="Fecha actual YYYY-MM-DD">📅 {{date}}</button>
-            <button type="button" class="chip-btn" data-var="{{time}}" title="Hora actual HH:mm:ss">⏰ {{time}}</button>
-            <button type="button" class="chip-btn" data-var="{{datetime}}" title="Fecha y hora completa">📆 {{datetime}}</button>
-            <button type="button" class="chip-btn" data-var="{{clipboard}}" title="Contenido previo del portapapeles">📋 {{clipboard}}</button>
-            <button type="button" class="chip-btn" data-var="{{year}}" title="Año (4 dígitos)">{{year}}</button>
-            <button type="button" class="chip-btn" data-var="{{month}}" title="Mes (01-12)">{{month}}</button>
-            <button type="button" class="chip-btn" data-var="{{day}}" title="Día (01-31)">{{day}}</button>
+            <div class="chip-wrapper">
+              <button type="button" class="chip-btn" data-var="{{date}}">📅 {{date}}</button>
+              <div class="chip-preview-bubble">
+                <div class="preview-header">Fecha Actual</div>
+                <div class="preview-example">Ejemplo: <strong class="preview-val" data-val-type="date">2026-08-31</strong></div>
+                <div class="preview-format">Formato: AAAA-MM-DD</div>
+              </div>
+            </div>
+
+            <div class="chip-wrapper">
+              <button type="button" class="chip-btn" data-var="{{time}}">⏰ {{time}}</button>
+              <div class="chip-preview-bubble">
+                <div class="preview-header">Hora Actual</div>
+                <div class="preview-example">Ejemplo: <strong class="preview-val" data-val-type="time">21:15:39</strong></div>
+                <div class="preview-format">Formato: HH:mm:ss</div>
+              </div>
+            </div>
+
+            <div class="chip-wrapper">
+              <button type="button" class="chip-btn" data-var="{{datetime}}">📆 {{datetime}}</button>
+              <div class="chip-preview-bubble">
+                <div class="preview-header">Fecha y Hora</div>
+                <div class="preview-example">Ejemplo: <strong class="preview-val" data-val-type="datetime">2026-08-31 21:15:39</strong></div>
+                <div class="preview-format">Formato: AAAA-MM-DD HH:mm:ss</div>
+              </div>
+            </div>
+
+            <div class="chip-wrapper">
+              <button type="button" class="chip-btn" data-var="{{clipboard}}">📋 {{clipboard}}</button>
+              <div class="chip-preview-bubble">
+                <div class="preview-header">Portapapeles Previo</div>
+                <div class="preview-example">Ejemplo: <strong style="font-style: italic;">[Texto en portapapeles]</strong></div>
+                <div class="preview-format">Inserta el texto copiado antes del atajo</div>
+              </div>
+            </div>
+
+            <div class="chip-wrapper">
+              <button type="button" class="chip-btn" data-var="{{year}}">{{year}}</button>
+              <div class="chip-preview-bubble">
+                <div class="preview-header">Año Actual</div>
+                <div class="preview-example">Ejemplo: <strong class="preview-val" data-val-type="year">2026</strong></div>
+                <div class="preview-format">Formato: 4 dígitos (YYYY)</div>
+              </div>
+            </div>
+
+            <div class="chip-wrapper">
+              <button type="button" class="chip-btn" data-var="{{month}}">{{month}}</button>
+              <div class="chip-preview-bubble">
+                <div class="preview-header">Mes Actual</div>
+                <div class="preview-example">Ejemplo: <strong class="preview-val" data-val-type="month">08</strong></div>
+                <div class="preview-format">Formato: 01 a 12 (MM)</div>
+              </div>
+            </div>
+
+            <div class="chip-wrapper">
+              <button type="button" class="chip-btn" data-var="{{day}}">{{day}}</button>
+              <div class="chip-preview-bubble">
+                <div class="preview-header">Día del Mes</div>
+                <div class="preview-example">Ejemplo: <strong class="preview-val" data-val-type="day">31</strong></div>
+                <div class="preview-format">Formato: 01 a 31 (DD)</div>
+              </div>
+            </div>
           </div>
           <textarea id="form-content" rows="5" placeholder="Escribe aquí el texto completo o prompt. Puedes usar variables dinámicas..." required class="input-clean"></textarea>
         </div>

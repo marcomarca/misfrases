@@ -67,6 +67,12 @@ const appApi = {
       ipcRenderer.invoke(IPC_CHANNELS.SELECTOR_SELECT, slot),
     cancel: (): Promise<{ success: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.SELECTOR_CANCEL)
   },
+  window: {
+    minimize: (): Promise<{ success: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_MINIMIZE),
+    maximize: (): Promise<{ isMaximized: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_MAXIMIZE),
+    close: (): Promise<{ success: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_CLOSE),
+    isMaximized: (): Promise<{ isMaximized: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_IS_MAXIMIZED)
+  },
   onNavigateTab: (callback: (tab: string) => void) => {
     const subscription = (_event: Electron.IpcRendererEvent, tab: string) => callback(tab);
     ipcRenderer.on('app:navigate-tab', subscription);

@@ -6,6 +6,19 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.2.1] - 2026-08-31
+
+### ✨ Añadido y Mejorado (Added & Improved)
+- **Barra Superior Integrada de Alto Rendimiento:** Reemplazo de la barra estándar de Windows por una barra de título personalizada estilizada, con aceleración por hardware (`-webkit-app-region: drag`) y controles nativos de ventana.
+- **Previsualización Dinámica de Variables en Vivo:** Tooltips flotantes interactivos sobre cada variable dinámica (`{{date}}`, `{{time}}`, etc.) mostrando el valor exacto generado en tiempo real.
+- **Botones de Reordenamiento Vectoriales:** Sustitución de caracteres de texto por botones squircle redondeados con iconos SVG Chevron.
+- **Scroll Horizontal en Tablas:** Contenedor de tablas responsivo con desplazamiento horizontal suave y barra de scroll estilizada en pantallas compactas.
+
+### 🐛 Corregido (Fixed)
+- **Modo Claro en Globos Emergentes:** Ajuste de paleta de colores en tooltips `(?)` para garantizar fondo blanco y alto contraste en tema claro.
+
+---
+
 ## [1.2.0] - 2026-08-31
 
 ### ✨ Añadido (Added)

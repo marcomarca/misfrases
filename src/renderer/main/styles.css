@@ -1,5 +1,5 @@
 :root {
-  /* Super Whisper Neutral Scale - Dark (Default) */
+  /* Neutral Color Scale - Dark (Default) */
   --bg-app: #0c1017;
   --bg-sidebar: #111722;
   --bg-card: #17202e;
@@ -32,7 +32,7 @@
 }
 
 [data-theme="light"] {
-  /* Super Whisper Neutral Scale - Light */
+  /* Neutral Color Scale - Light */
   --bg-app: #f2f4f7;
   --bg-sidebar: #f8fafc;
   --bg-card: #ffffff;
@@ -498,7 +498,7 @@ body {
   border-color: var(--accent-primary);
 }
 
-/* ==================== SUPER WHISPER GROUPED SETTINGS ==================== */
+/* ==================== MODERN GROUPED SETTINGS ==================== */
 .settings-groups-container {
   display: flex;
   flex-direction: column;
@@ -654,7 +654,7 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
-/* ==================== SWITCHES (Super Whisper Proportions) ==================== */
+/* ==================== SWITCHES (Modern Proportions) ==================== */
 .switch {
   position: relative;
   display: inline-block;

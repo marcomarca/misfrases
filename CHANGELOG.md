@@ -6,6 +6,15 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.3.0] - 2026-09-01
+
+### ✨ Añadido (Added)
+- **Tablas Agrupadas por Atajo de Teclado:** Reorganización completa de la biblioteca principal en bloques y tarjetas separadas para cada atajo registrado.
+- **Cabeceras de Atajo con Acciones Rápidas:** Keycaps visuales integrados, indicador de slots ocupados (`N/10 slots`), botón de reordenamiento directo y creación preconfigurada de frases por atajo.
+- **Mayor Espacio y Legibilidad:** Eliminación de columnas redundantes dentro de las filas para maximizar el área de lectura de títulos, descripciones y contenido a expandir.
+
+---
+
 ## [1.2.1] - 2026-08-31
 
 ### ✨ Añadido y Mejorado (Added & Improved)

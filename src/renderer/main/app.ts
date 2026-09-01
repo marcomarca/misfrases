@@ -15,7 +15,7 @@ class MainApp {
   // DOM elements
   private navButtons!: NodeListOf<HTMLButtonElement>;
   private tabPanes!: NodeListOf<HTMLElement>;
-  private snippetsTbody!: HTMLElement;
+  private snippetsGroupsContainer!: HTMLElement;
   private snippetsEmpty!: HTMLElement;
   private searchInput!: HTMLInputElement;
   private filterGroupSelect!: HTMLSelectElement;
@@ -70,7 +70,7 @@ class MainApp {
   private initDOMElements(): void {
     this.navButtons = document.querySelectorAll('.nav-item');
     this.tabPanes = document.querySelectorAll('.tab-pane');
-    this.snippetsTbody = document.getElementById('snippets-tbody')!;
+    this.snippetsGroupsContainer = document.getElementById('snippets-groups-container')!;
     this.snippetsEmpty = document.getElementById('snippets-empty')!;
     this.searchInput = document.getElementById('search-input') as HTMLInputElement;
     this.filterGroupSelect = document.getElementById('filter-group-select') as HTMLSelectElement;
@@ -408,7 +408,7 @@ class MainApp {
       return matchQuery && matchGroup;
     });
 
-    this.snippetsTbody.innerHTML = '';
+    this.snippetsGroupsContainer.innerHTML = '';
 
     if (filtered.length === 0) {
       this.snippetsEmpty.classList.remove('hidden');
@@ -417,48 +417,131 @@ class MainApp {
 
     this.snippetsEmpty.classList.add('hidden');
 
+    // Group snippets by accelerator
+    const groupsMap = new Map<string, Snippet[]>();
     for (const snippet of filtered) {
-      const tr = document.createElement('tr');
-
-      const descHtml = snippet.description
-        ? `<div class="table-desc-cell">${this.escapeHtml(snippet.description)}</div>`
-        : '';
-
-      tr.innerHTML = `
-        <td><span class="slot-badge">${snippet.slot === 10 ? '0' : snippet.slot}</span></td>
-        <td>${this.renderKeycaps(snippet.accelerator)}</td>
-        <td>
-          <div class="table-title-cell">${this.escapeHtml(snippet.title)}</div>
-          ${descHtml}
-        </td>
-        <td><div class="table-desc-cell" style="font-family: monospace;">${this.escapeHtml(snippet.content)}</div></td>
-        <td style="text-align: center; font-weight: 600;">${snippet.usageCount.toLocaleString()}</td>
-        <td style="text-align: center;">
-          <label class="switch" style="transform: scale(0.8);">
-            <input type="checkbox" ${snippet.enabled ? 'checked' : ''} data-toggle-id="${snippet.id}">
-            <span class="slider"></span>
-          </label>
-        </td>
-        <td>
-          <div class="table-actions">
-            <button class="action-icon-btn" data-edit-id="${snippet.id}" title="Editar">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            </button>
-            <button class="action-icon-btn" data-duplicate-id="${snippet.id}" title="Duplicar">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            </button>
-            <button class="action-icon-btn danger" data-delete-id="${snippet.id}" title="Eliminar">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
-          </div>
-        </td>
-      `;
-
-      this.snippetsTbody.appendChild(tr);
+      const acc = snippet.accelerator || 'Control+Alt+P';
+      if (!groupsMap.has(acc)) {
+        groupsMap.set(acc, []);
+      }
+      groupsMap.get(acc)!.push(snippet);
     }
 
+    // Sort group keys
+    const sortedAccelerators = Array.from(groupsMap.keys()).sort();
+
+    for (const accelerator of sortedAccelerators) {
+      const snippetsInGroup = groupsMap.get(accelerator)!.sort((a, b) => a.slot - b.slot);
+
+      const groupBlock = document.createElement('div');
+      groupBlock.className = 'hotkey-group-block';
+
+      // Header with keycaps, slot count, and quick actions
+      const headerHtml = `
+        <div class="hotkey-group-header">
+          <div class="hotkey-group-left">
+            <div class="hotkey-group-title">
+              ${this.renderKeycaps(accelerator)}
+            </div>
+            <span class="hotkey-group-badge">${snippetsInGroup.length}/10 slots</span>
+          </div>
+          <div class="hotkey-group-actions">
+            <button class="btn btn-secondary btn-sm" data-reorder-hotkey="${this.escapeHtml(accelerator)}" title="Reordenar slots de este atajo">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 15 12 20 17 15"></polyline><polyline points="7 9 12 4 17 9"></polyline></svg>
+              Reordenar
+            </button>
+            <button class="btn btn-secondary btn-sm" data-add-to-hotkey="${this.escapeHtml(accelerator)}" title="Añadir frase a este atajo">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Nueva Frase
+            </button>
+          </div>
+        </div>
+      `;
+
+      let rowsHtml = '';
+      for (const snippet of snippetsInGroup) {
+        const descHtml = snippet.description
+          ? `<div class="table-desc-cell">${this.escapeHtml(snippet.description)}</div>`
+          : '';
+
+        rowsHtml += `
+          <tr>
+            <td><span class="slot-badge">${snippet.slot === 10 ? '0' : snippet.slot}</span></td>
+            <td>
+              <div class="table-title-cell">${this.escapeHtml(snippet.title)}</div>
+              ${descHtml}
+            </td>
+            <td><div class="table-desc-cell" style="font-family: monospace;">${this.escapeHtml(snippet.content)}</div></td>
+            <td style="text-align: center; font-weight: 600;">${snippet.usageCount.toLocaleString()}</td>
+            <td style="text-align: center;">
+              <label class="switch" style="transform: scale(0.8);">
+                <input type="checkbox" ${snippet.enabled ? 'checked' : ''} data-toggle-id="${snippet.id}">
+                <span class="slider"></span>
+              </label>
+            </td>
+            <td>
+              <div class="table-actions">
+                <button class="action-icon-btn" data-edit-id="${snippet.id}" title="Editar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button class="action-icon-btn" data-duplicate-id="${snippet.id}" title="Duplicar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+                <button class="action-icon-btn danger" data-delete-id="${snippet.id}" title="Eliminar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+
+      const tableHtml = `
+        <div class="card-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 68px;">Slot</th>
+                <th>Título y Propósito</th>
+                <th>Vista previa (Contenido)</th>
+                <th style="width: 85px; text-align: center;">Usos</th>
+                <th style="width: 85px; text-align: center;">Estado</th>
+                <th style="width: 120px; text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      groupBlock.innerHTML = headerHtml + tableHtml;
+      this.snippetsGroupsContainer.appendChild(groupBlock);
+    }
+
+    // Attach group header action events
+    this.snippetsGroupsContainer.querySelectorAll('[data-reorder-hotkey]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const hotkey = btn.getAttribute('data-reorder-hotkey')!;
+        this.switchTab('reorder');
+        const targetSnippet = this.snippets.find((s) => s.accelerator === hotkey);
+        if (targetSnippet && this.reorderHotkeySelect) {
+          this.reorderHotkeySelect.value = targetSnippet.hotkeyGroupId;
+          this.handleReorderHotkeyChange();
+        }
+      });
+    });
+
+    this.snippetsGroupsContainer.querySelectorAll('[data-add-to-hotkey]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const hotkey = btn.getAttribute('data-add-to-hotkey')!;
+        this.openCreateModal(hotkey);
+      });
+    });
+
     // Attach row events
-    this.snippetsTbody.querySelectorAll('[data-toggle-id]').forEach((el) => {
+    this.snippetsGroupsContainer.querySelectorAll('[data-toggle-id]').forEach((el) => {
       el.addEventListener('change', async (e) => {
         const id = (e.target as HTMLElement).getAttribute('data-toggle-id')!;
         const checked = (e.target as HTMLInputElement).checked;
@@ -473,14 +556,14 @@ class MainApp {
       });
     });
 
-    this.snippetsTbody.querySelectorAll('[data-edit-id]').forEach((el) => {
+    this.snippetsGroupsContainer.querySelectorAll('[data-edit-id]').forEach((el) => {
       el.addEventListener('click', () => {
         const id = el.getAttribute('data-edit-id')!;
         this.openEditModal(id);
       });
     });
 
-    this.snippetsTbody.querySelectorAll('[data-duplicate-id]').forEach((el) => {
+    this.snippetsGroupsContainer.querySelectorAll('[data-duplicate-id]').forEach((el) => {
       el.addEventListener('click', async () => {
         const id = el.getAttribute('data-duplicate-id')!;
         const dup = await window.appApi.snippets.duplicate(id);
@@ -489,7 +572,7 @@ class MainApp {
       });
     });
 
-    this.snippetsTbody.querySelectorAll('[data-delete-id]').forEach((el) => {
+    this.snippetsGroupsContainer.querySelectorAll('[data-delete-id]').forEach((el) => {
       el.addEventListener('click', async () => {
         const id = el.getAttribute('data-delete-id')!;
         const current = this.snippets.find((s) => s.id === id);
@@ -504,7 +587,7 @@ class MainApp {
   }
 
   // MODAL
-  private openCreateModal(): void {
+  private openCreateModal(prefillHotkey?: string): void {
     this.modalTitle.textContent = 'Nueva Frase';
     this.formSnippetId.value = '';
     this.formTitle.value = '';
@@ -514,8 +597,9 @@ class MainApp {
     this.formContent.style.width = '';
     this.formDescription.style.height = '';
     this.formDescription.style.width = '';
-    this.formAccelerator.value = 'Control+Alt+P';
-    this.hotkeyDisplay.textContent = 'Control+Alt+P';
+    const initialHotkey = prefillHotkey || 'Control+Alt+P';
+    this.formAccelerator.value = initialHotkey;
+    this.hotkeyDisplay.textContent = initialHotkey;
     this.formSlot.value = '';
     this.formEnabled.checked = true;
     this.hotkeyFeedback.textContent = 'Pulsa "Grabar atajo" y luego presiona la combinación deseada.';

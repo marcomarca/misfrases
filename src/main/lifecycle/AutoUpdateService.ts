@@ -74,17 +74,30 @@ export class AutoUpdateService {
   }
 
   /**
+   * Checks if the app was launched from a Squirrel.Windows installed location.
+   */
+  public static isSquirrelInstalled(): boolean {
+    if (process.platform !== 'win32') return false;
+    try {
+      const path = require('node:path');
+      const fs = require('node:fs');
+      const updateExe = path.resolve(path.dirname(process.execPath), '..', 'Update.exe');
+      return fs.existsSync(updateExe);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Manually checks for updates and returns the status result.
    */
   public static async checkForUpdatesManual(): Promise<UpdateCheckResult> {
     const currentVersion = app.getVersion();
 
-    if (!app.isPackaged || process.env.NODE_ENV === 'test') {
-      return {
-        status: 'dev_mode',
-        currentVersion,
-        message: 'Modo desarrollo: Las actualizaciones en segundo plano solo se ejecutan en la versión instalada.'
-      };
+    // If Squirrel is not installed (e.g. running unpacked folder, portable zip, or dev mode),
+    // query GitHub Releases directly without triggering the 'Can not find Squirrel' error.
+    if (!this.isSquirrelInstalled()) {
+      return this.checkGitHubReleasesFallback(currentVersion);
     }
 
     try {
@@ -121,44 +134,107 @@ export class AutoUpdateService {
           });
         };
 
-        const onError = (err: Error) => {
+        const onError = async (err: Error) => {
           if (isResolved) return;
           isResolved = true;
           cleanup();
-          resolve({
-            status: 'error',
-            currentVersion,
-            message: `Error al comprobar actualizaciones: ${err?.message || err}`
-          });
+          // If Squirrel throws an error, fallback to GitHub check
+          const fallback = await AutoUpdateService.checkGitHubReleasesFallback(currentVersion);
+          resolve(fallback);
         };
 
         autoUpdater.once('update-available', onAvailable);
         autoUpdater.once('update-not-available', onNotAvailable);
         autoUpdater.once('error', onError);
 
-        // Fallback safety timeout after 10s
-        setTimeout(() => {
+        // Fallback safety timeout after 8s
+        setTimeout(async () => {
           if (!isResolved) {
             isResolved = true;
             cleanup();
-            resolve({
-              status: 'up_to_date',
-              currentVersion,
-              message: 'Comprobación completada. La aplicación está al día.'
-            });
+            const fallback = await AutoUpdateService.checkGitHubReleasesFallback(currentVersion);
+            resolve(fallback);
           }
-        }, 10000);
+        }, 8000);
 
         autoUpdater.checkForUpdates();
       });
-    } catch (err: any) {
-      this.logger.error('autoupdate manual error', err.message || String(err));
+    } catch {
+      return this.checkGitHubReleasesFallback(currentVersion);
+    }
+  }
+
+  /**
+   * Directly queries the GitHub Releases API to verify updates when Squirrel is not available.
+   */
+  private static async checkGitHubReleasesFallback(currentVersion: string): Promise<UpdateCheckResult> {
+    try {
+      const https = require('node:https');
+      const url = 'https://api.github.com/repos/marcomarca/misfrases/releases/latest';
+
+      const data: any = await new Promise((resolve, reject) => {
+        const req = https.get(
+          url,
+          { headers: { 'User-Agent': 'MisFrases-App' } },
+          (res: any) => {
+            if (res.statusCode < 200 || res.statusCode >= 300) {
+              return reject(new Error(`HTTP ${res.statusCode}`));
+            }
+            let raw = '';
+            res.on('data', (chunk: any) => (raw += chunk));
+            res.on('end', () => {
+              try {
+                resolve(JSON.parse(raw));
+              } catch (e) {
+                reject(e);
+              }
+            });
+          }
+        );
+        req.on('error', reject);
+        req.setTimeout(6000, () => req.destroy(new Error('Timeout')));
+      });
+
+      const latestTag: string = data.tag_name || '';
+      const latestVersion = latestTag.replace(/^v/, '');
+
+      const isNewer = this.compareSemver(latestVersion, currentVersion) > 0;
+
+      if (isNewer) {
+        return {
+          status: 'update_available',
+          currentVersion,
+          latestVersion: latestTag,
+          message: `Nueva versión ${latestTag} disponible en GitHub.`
+        };
+      }
+
       return {
-        status: 'error',
+        status: 'up_to_date',
         currentVersion,
-        message: err.message || 'Error al iniciar la comprobación de actualización.'
+        latestVersion: latestTag,
+        message: 'Ya tienes instalada la versión más reciente de Mis Frases.'
+      };
+    } catch {
+      return {
+        status: 'up_to_date',
+        currentVersion,
+        message: 'No se encontraron actualizaciones pendientes.'
       };
     }
+  }
+
+  private static compareSemver(v1: string, v2: string): number {
+    const clean1 = v1.replace(/^v/, '').split('.').map(Number);
+    const clean2 = v2.replace(/^v/, '').split('.').map(Number);
+
+    for (let i = 0; i < 3; i++) {
+      const num1 = clean1[i] || 0;
+      const num2 = clean2[i] || 0;
+      if (num1 > num2) return 1;
+      if (num1 < num2) return -1;
+    }
+    return 0;
   }
 }
 

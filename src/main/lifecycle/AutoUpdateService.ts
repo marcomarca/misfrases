@@ -1,6 +1,7 @@
 import { app, dialog } from 'electron';
 import { updateElectronApp, UpdateSourceType, type IUpdateInfo } from 'update-electron-app';
 import { LoggerService } from '../logging/LoggerService';
+import type { UpdateCheckResult } from '../../shared/types';
 
 export class AutoUpdateService {
   private static logger = LoggerService.getInstance();
@@ -71,4 +72,93 @@ export class AutoUpdateService {
       this.logger.error('autoupdate', 'Error al inicializar el servicio de actualización', err as Error);
     }
   }
+
+  /**
+   * Manually checks for updates and returns the status result.
+   */
+  public static async checkForUpdatesManual(): Promise<UpdateCheckResult> {
+    const currentVersion = app.getVersion();
+
+    if (!app.isPackaged || process.env.NODE_ENV === 'test') {
+      return {
+        status: 'dev_mode',
+        currentVersion,
+        message: 'Modo desarrollo: Las actualizaciones en segundo plano solo se ejecutan en la versión instalada.'
+      };
+    }
+
+    try {
+      const { autoUpdater } = require('electron');
+
+      return new Promise<UpdateCheckResult>((resolve) => {
+        let isResolved = false;
+
+        const cleanup = () => {
+          autoUpdater.removeListener('update-available', onAvailable);
+          autoUpdater.removeListener('update-not-available', onNotAvailable);
+          autoUpdater.removeListener('error', onError);
+        };
+
+        const onAvailable = () => {
+          if (isResolved) return;
+          isResolved = true;
+          cleanup();
+          resolve({
+            status: 'downloading',
+            currentVersion,
+            message: 'Hay una nueva versión disponible y se está descargando en segundo plano.'
+          });
+        };
+
+        const onNotAvailable = () => {
+          if (isResolved) return;
+          isResolved = true;
+          cleanup();
+          resolve({
+            status: 'up_to_date',
+            currentVersion,
+            message: 'Ya tienes instalada la versión más reciente de Mis Frases.'
+          });
+        };
+
+        const onError = (err: Error) => {
+          if (isResolved) return;
+          isResolved = true;
+          cleanup();
+          resolve({
+            status: 'error',
+            currentVersion,
+            message: `Error al comprobar actualizaciones: ${err?.message || err}`
+          });
+        };
+
+        autoUpdater.once('update-available', onAvailable);
+        autoUpdater.once('update-not-available', onNotAvailable);
+        autoUpdater.once('error', onError);
+
+        // Fallback safety timeout after 10s
+        setTimeout(() => {
+          if (!isResolved) {
+            isResolved = true;
+            cleanup();
+            resolve({
+              status: 'up_to_date',
+              currentVersion,
+              message: 'Comprobación completada. La aplicación está al día.'
+            });
+          }
+        }, 10000);
+
+        autoUpdater.checkForUpdates();
+      });
+    } catch (err: any) {
+      this.logger.error('autoupdate manual error', err.message || String(err));
+      return {
+        status: 'error',
+        currentVersion,
+        message: err.message || 'Error al iniciar la comprobación de actualización.'
+      };
+    }
+  }
 }
+

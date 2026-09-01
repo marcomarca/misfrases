@@ -33,14 +33,22 @@ export const IPC_CHANNELS = {
   // Selector
   SELECTOR_SELECT: 'selector:select',
   SELECTOR_CANCEL: 'selector:cancel',
-  SELECTOR_GET_DATA: 'selector:get-data'
+  SELECTOR_GET_DATA: 'selector:get-data',
+
+  // Auto-Update
+  AUTOUPDATE_CHECK: 'autoupdate:check',
+
+  // Backup
+  BACKUP_EXPORT: 'backup:export',
+  BACKUP_IMPORT: 'backup:import'
 } as const;
 
 export const DEFAULT_SETTINGS = {
   launchAtLogin: false,
   administratorMode: false,
   hotkeysEnabled: true,
-  startHidden: false
+  startHidden: false,
+  theme: 'dark'
 } as const;
 
 export const MAX_SLOTS = 10;

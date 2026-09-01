@@ -6,6 +6,17 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.1.0] - 2026-08-31
+
+### ✨ Añadido (Added)
+- **Variables Dinámicas en Frases ([FEAT-02]):** Soporte para etiquetas dinámicas `{{date}}`, `{{time}}`, `{{datetime}}`, `{{year}}`, `{{month}}`, `{{day}}`, `{{hour}}`, `{{minute}}`, `{{second}}` y `{{clipboard}}` mediante el nuevo motor `TemplateEngine`.
+- **Chips Rápidos de Variables:** Inserción de variables dinámicas con un solo clic desde el modal de creación y edición de frases.
+- **Copia de Seguridad y Restauración JSON ([FEAT-03]):** Exportación de frases a archivos `.json` e importación transaccional con validación de esquemas Zod a través de `BackupService`.
+- **Selector de Tema Oscuro / Claro / Sistema ([FEAT-04]):** Nueva opción en Configuración con cambio dinámico de tema y tokens CSS optimizados.
+- **Comprobación Manual de Actualizaciones ([FEAT-01]):** Botón interactivo en Configuración para verificar disponibilidad de nuevas versiones en GitHub Releases en cualquier momento.
+
+---
+
 ## [1.0.3] - 2026-08-31
 
 ### 🐛 Corregido (Fixed)

@@ -35,6 +35,7 @@ export interface AppSettings {
   administratorMode: boolean;
   hotkeysEnabled: boolean;
   startHidden: boolean;
+  theme: 'dark' | 'light' | 'system';
 }
 
 export type AppState = 'STARTING' | 'READY' | 'PAUSED' | 'SELECTOR_OPEN' | 'EXPANDING' | 'SHUTTING_DOWN';
@@ -99,4 +100,44 @@ export interface ValidateHotkeyResult {
   normalized?: string;
   error?: string;
   conflict?: 'EXTERNAL' | 'APP_EXISTS' | null;
+}
+
+export interface BackupSnippetData {
+  id: string;
+  title: string;
+  description: string;
+  content: string;
+  slot: SlotNumber;
+  enabled: boolean;
+  accelerator: string;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface BackupData {
+  version: string;
+  exportedAt: number;
+  snippets: BackupSnippetData[];
+}
+
+export interface ExportBackupResult {
+  success: boolean;
+  canceled?: boolean;
+  filePath?: string;
+  snippetCount?: number;
+  error?: string;
+}
+
+export interface ImportBackupResult {
+  success: boolean;
+  canceled?: boolean;
+  importedCount?: number;
+  error?: string;
+}
+
+export interface UpdateCheckResult {
+  status: 'up_to_date' | 'downloading' | 'update_available' | 'dev_mode' | 'error';
+  currentVersion: string;
+  latestVersion?: string;
+  message?: string;
 }

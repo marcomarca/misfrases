@@ -3,10 +3,13 @@ import { IPC_CHANNELS } from '../shared/constants';
 import type {
   AppSettings,
   CreateSnippetInput,
+  ExportBackupResult,
+  ImportBackupResult,
   ReorderSnippetsInput,
   Snippet,
   SnippetStats,
   StatsSummary,
+  UpdateCheckResult,
   UpdateSnippetInput,
   ValidateHotkeyResult
 } from '../shared/types';
@@ -43,6 +46,14 @@ const appApi = {
     get: (): Promise<AppSettings> => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET),
     update: (input: Partial<AppSettings>): Promise<AppSettings> =>
       ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_UPDATE, input)
+  },
+  autoupdate: {
+    check: (): Promise<UpdateCheckResult> => ipcRenderer.invoke(IPC_CHANNELS.AUTOUPDATE_CHECK)
+  },
+  backup: {
+    export: (): Promise<ExportBackupResult> => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_EXPORT),
+    import: (mode: 'merge' | 'replace' = 'merge'): Promise<ImportBackupResult> =>
+      ipcRenderer.invoke(IPC_CHANNELS.BACKUP_IMPORT, mode)
   },
   runtime: {
     pause: (): Promise<{ state: string }> => ipcRenderer.invoke(IPC_CHANNELS.RUNTIME_PAUSE),

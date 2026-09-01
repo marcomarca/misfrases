@@ -16,6 +16,10 @@ import type { SelectorWindowService } from '../popup/SelectorWindowService';
 import type { TrayService } from '../tray/TrayService';
 import { LoginItemService } from '../lifecycle/LoginItemService';
 
+import type { BackupService } from '../backup/BackupService';
+import { AutoUpdateService } from '../lifecycle/AutoUpdateService';
+import type { BrowserWindow } from 'electron';
+
 export interface IpcServices {
   snippetService: SnippetService;
   hotkeyService: HotkeyService;
@@ -24,6 +28,8 @@ export interface IpcServices {
   expansionService: ExpansionService;
   selectorService: SelectorWindowService;
   trayService: TrayService;
+  backupService: BackupService;
+  getMainWindow?: () => BrowserWindow | null;
   onQuit: () => void;
 }
 
@@ -149,5 +155,22 @@ export function registerIpcHandlers(services: IpcServices): void {
   ipcMain.handle(IPC_CHANNELS.SELECTOR_CANCEL, async () => {
     services.selectorService.cancel();
     return { success: true };
+  });
+
+  // Auto-Update
+  ipcMain.handle(IPC_CHANNELS.AUTOUPDATE_CHECK, async () => {
+    return AutoUpdateService.checkForUpdatesManual();
+  });
+
+  // Backup
+  ipcMain.handle(IPC_CHANNELS.BACKUP_EXPORT, async () => {
+    const win = services.getMainWindow ? services.getMainWindow() : null;
+    return services.backupService.exportToFile(win);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.BACKUP_IMPORT, async (_, rawMode: unknown) => {
+    const mode = rawMode === 'replace' ? 'replace' : 'merge';
+    const win = services.getMainWindow ? services.getMainWindow() : null;
+    return services.backupService.importFromFile(win, mode);
   });
 }

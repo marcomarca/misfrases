@@ -13,6 +13,7 @@ import { StatisticsService } from '../statistics/StatisticsService';
 import { SelectorWindowService } from '../popup/SelectorWindowService';
 import { ExpansionService } from '../expansion/ExpansionService';
 import { SnippetService } from '../snippets/SnippetService';
+import { BackupService } from '../backup/BackupService';
 import { TrayService } from '../tray/TrayService';
 import { SingleInstanceService } from './SingleInstanceService';
 import { LoginItemService } from './LoginItemService';
@@ -36,6 +37,7 @@ export class AppLifecycleService {
   private selectorService!: SelectorWindowService;
   private expansionService!: ExpansionService;
   private snippetService!: SnippetService;
+  private backupService!: BackupService;
   private trayService!: TrayService;
 
   private mainWindow: BrowserWindow | null = null;
@@ -102,6 +104,12 @@ export class AppLifecycleService {
       this.hotkeyService
     );
 
+    this.backupService = new BackupService(
+      this.snippetRepo,
+      this.hotkeyRepo,
+      this.hotkeyService
+    );
+
     this.trayService = new TrayService();
 
     // 7. Hotkey trigger wiring
@@ -125,6 +133,8 @@ export class AppLifecycleService {
       expansionService: this.expansionService,
       selectorService: this.selectorService,
       trayService: this.trayService,
+      backupService: this.backupService,
+      getMainWindow: () => this.mainWindow,
       onQuit: () => this.quit()
     });
 

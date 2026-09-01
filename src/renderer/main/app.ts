@@ -53,6 +53,11 @@ class MainApp {
   private settingAdminMode!: HTMLInputElement;
   private settingHotkeysEnabled!: HTMLInputElement;
   private settingStartHidden!: HTMLInputElement;
+  private settingTheme!: HTMLSelectElement;
+  private btnExportBackup!: HTMLButtonElement;
+  private btnImportBackup!: HTMLButtonElement;
+  private btnCheckUpdates!: HTMLButtonElement;
+  private updateStatusText!: HTMLElement;
   private statusIndicator!: HTMLElement;
   private statusText!: HTMLElement;
 
@@ -98,6 +103,11 @@ class MainApp {
     this.settingAdminMode = document.getElementById('setting-admin-mode') as HTMLInputElement;
     this.settingHotkeysEnabled = document.getElementById('setting-hotkeys-enabled') as HTMLInputElement;
     this.settingStartHidden = document.getElementById('setting-start-hidden') as HTMLInputElement;
+    this.settingTheme = document.getElementById('setting-theme') as HTMLSelectElement;
+    this.btnExportBackup = document.getElementById('btn-export-backup') as HTMLButtonElement;
+    this.btnImportBackup = document.getElementById('btn-import-backup') as HTMLButtonElement;
+    this.btnCheckUpdates = document.getElementById('btn-check-updates') as HTMLButtonElement;
+    this.updateStatusText = document.getElementById('update-status-text')!;
     this.statusIndicator = document.getElementById('status-indicator')!;
     this.statusText = document.getElementById('status-text')!;
   }
@@ -192,6 +202,99 @@ class MainApp {
         checked ? 'Inicio minimizado en bandeja activado' : 'Inicio minimizado desactivado',
         'info'
       );
+    });
+
+    // Theme selector
+    this.settingTheme?.addEventListener('change', async () => {
+      const theme = this.settingTheme.value as 'dark' | 'light' | 'system';
+      await window.appApi.settings.update({ theme });
+      this.applyTheme(theme);
+      this.showToast(`Tema ${theme} aplicado`, 'info');
+    });
+
+    // Variable Chips in snippet modal
+    document.querySelectorAll('.chip-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const varTag = btn.getAttribute('data-var');
+        if (varTag && this.formContent) {
+          const start = this.formContent.selectionStart;
+          const end = this.formContent.selectionEnd;
+          const text = this.formContent.value;
+          this.formContent.value = text.substring(0, start) + varTag + text.substring(end);
+          this.formContent.focus();
+          this.formContent.selectionStart = this.formContent.selectionEnd = start + varTag.length;
+        }
+      });
+    });
+
+    // Backup & Restore
+    this.btnExportBackup?.addEventListener('click', async () => {
+      this.btnExportBackup.disabled = true;
+      try {
+        const res = await window.appApi.backup.export();
+        if (res.success) {
+          this.showToast(`Copia de seguridad guardada (${res.snippetCount} frases)`, 'success');
+        } else if (!res.canceled) {
+          this.showToast(`Error al exportar: ${res.error || 'Error desconocido'}`, 'error');
+        }
+      } finally {
+        this.btnExportBackup.disabled = false;
+      }
+    });
+
+    this.btnImportBackup?.addEventListener('click', async () => {
+      this.btnImportBackup.disabled = true;
+      try {
+        const res = await window.appApi.backup.import('merge');
+        if (res.success) {
+          this.showToast(`${res.importedCount} frases importadas correctamente`, 'success');
+          await this.loadSnippets();
+        } else if (!res.canceled) {
+          this.showToast(`Error al importar: ${res.error || 'Error desconocido'}`, 'error');
+        }
+      } finally {
+        this.btnImportBackup.disabled = false;
+      }
+    });
+
+    // Manual Updates Check
+    this.btnCheckUpdates?.addEventListener('click', async () => {
+      this.btnCheckUpdates.disabled = true;
+      const originalText = this.btnCheckUpdates.textContent;
+      this.btnCheckUpdates.textContent = 'Buscando...';
+      if (this.updateStatusText) {
+        this.updateStatusText.textContent = 'Comprobando versiones en GitHub Releases...';
+      }
+
+      try {
+        const res = await window.appApi.autoupdate.check();
+        if (res.status === 'up_to_date') {
+          this.showToast('Ya tienes la versión más reciente instalada', 'success');
+          if (this.updateStatusText) {
+            this.updateStatusText.textContent = `Tu versión (${res.currentVersion}) está actualizada.`;
+          }
+        } else if (res.status === 'downloading') {
+          this.showToast('Descargando nueva versión en segundo plano...', 'info');
+          if (this.updateStatusText) {
+            this.updateStatusText.textContent = res.message || 'Descargando actualización...';
+          }
+        } else if (res.status === 'dev_mode') {
+          this.showToast(res.message || 'Modo desarrollo activo', 'info');
+          if (this.updateStatusText) {
+            this.updateStatusText.textContent = res.message || 'Modo desarrollo: Actualizaciones omitidas.';
+          }
+        } else {
+          this.showToast(res.message || 'Error al comprobar actualización', 'error');
+          if (this.updateStatusText) {
+            this.updateStatusText.textContent = res.message || 'Error al conectar con el servidor de actualizaciones.';
+          }
+        }
+      } catch (err: any) {
+        this.showToast(`Error: ${err.message || err}`, 'error');
+      } finally {
+        this.btnCheckUpdates.disabled = false;
+        this.btnCheckUpdates.textContent = originalText || '🔄 Comprobar actualizaciones ahora';
+      }
     });
   }
 
@@ -719,7 +822,21 @@ class MainApp {
     this.settingHotkeysEnabled.checked = settings.hotkeysEnabled;
     this.settingStartHidden.checked = settings.startHidden;
 
+    if (this.settingTheme) {
+      this.settingTheme.value = settings.theme || 'dark';
+    }
+    this.applyTheme(settings.theme || 'dark');
+
     this.updateStatusBadge(settings.hotkeysEnabled);
+  }
+
+  private applyTheme(theme: 'dark' | 'light' | 'system'): void {
+    if (theme === 'system') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+    } else {
+      document.documentElement.dataset.theme = theme;
+    }
   }
 
   private updateStatusBadge(enabled: boolean): void {

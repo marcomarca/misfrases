@@ -6,6 +6,8 @@ import type { SnippetRepository } from '../database/repositories/SnippetReposito
 import type { SelectorWindowService } from '../popup/SelectorWindowService';
 import { LoggerService } from '../logging/LoggerService';
 
+import { TemplateEngine } from './TemplateEngine';
+
 export class ExpansionService {
   private logger = LoggerService.getInstance();
   private state: AppState = 'READY';
@@ -73,11 +75,23 @@ export class ExpansionService {
       await this.windowsInput.waitForModifiersReleased(1000);
 
       let dispatched = false;
+      let clipboardTextForTemplate = '';
+      let snapshot: any = null;
+      const canUseClipboard = this.clipboardGuard.canSnapshotSafely();
+
+      if (canUseClipboard) {
+        snapshot = this.clipboardGuard.snapshot();
+        clipboardTextForTemplate = snapshot.text || '';
+      }
+
+      // Render dynamic variables ({{date}}, {{time}}, {{clipboard}}, etc.)
+      const contentToInsert = TemplateEngine.render(snippet.content, {
+        clipboardText: clipboardTextForTemplate
+      });
 
       // Strategy selection: Safe clipboard paste vs Direct Unicode input
-      if (this.clipboardGuard.canSnapshotSafely()) {
-        const snapshot = this.clipboardGuard.snapshot();
-        this.clipboardGuard.setTemporaryText(snippet.content);
+      if (canUseClipboard && snapshot) {
+        this.clipboardGuard.setTemporaryText(contentToInsert);
 
         // Brief synchronization pause so the OS clipboard buffer commits before Ctrl+V
         await new Promise((resolve) => setTimeout(resolve, 30));
@@ -97,7 +111,7 @@ export class ExpansionService {
         this.clipboardGuard.restore(snapshot);
       } else {
         // Unsafe format (e.g. image or complex binary): leave clipboard intact and use Unicode SendInput
-        dispatched = this.windowsInput.sendUnicode(snippet.content);
+        dispatched = this.windowsInput.sendUnicode(contentToInsert);
         if (!dispatched) {
           this.logger.error('expansion failure', 'SendInput Unicode fallback failed', undefined, {
             snippetId: snippet.id

@@ -43,8 +43,31 @@ export const UpdateSettingsSchema = z.object({
   administratorMode: z.boolean().optional(),
   hotkeysEnabled: z.boolean().optional(),
   startHidden: z.boolean().optional(),
+  theme: z.enum(['dark', 'light', 'system']).optional()
 });
 
 export const ValidateHotkeySchema = z.object({
   accelerator: z.string().trim().min(1),
+});
+
+export const BackupSnippetSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(300).optional().default(''),
+  content: z.string().min(1),
+  slot: SlotNumberSchema,
+  enabled: z.boolean().optional().default(true),
+  accelerator: z.string().trim().min(1),
+  createdAt: z.number().optional(),
+  updatedAt: z.number().optional()
+});
+
+export const BackupDataSchema = z.object({
+  version: z.string().optional().default('1.0'),
+  exportedAt: z.number().optional().default(() => Date.now()),
+  snippets: z.array(BackupSnippetSchema)
+});
+
+export const ImportBackupOptionsSchema = z.object({
+  mode: z.enum(['merge', 'replace']).optional().default('merge')
 });

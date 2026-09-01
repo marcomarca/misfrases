@@ -212,6 +212,18 @@
 
           <div class="setting-item">
             <div class="setting-info">
+              <h4>Tema de la aplicación</h4>
+              <p>Elige entre el modo oscuro, claro o sincronizado con el sistema.</p>
+            </div>
+            <select id="setting-theme" class="select-theme">
+              <option value="dark">🌙 Oscuro</option>
+              <option value="light">☀️ Claro</option>
+              <option value="system">💻 Sistema</option>
+            </select>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
               <h4>Iniciar minimizado en la bandeja</h4>
               <p>No abre la ventana principal en el arranque; permanece en segundo plano.</p>
             </div>
@@ -219,6 +231,35 @@
               <input type="checkbox" id="setting-start-hidden">
               <span class="slider"></span>
             </label>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top: 28px;">
+          <h3>Copia de Seguridad y Restauración</h3>
+        </div>
+        <div class="settings-card">
+          <div class="backup-actions">
+            <div>
+              <h4>Respaldo de Frases y Atajos</h4>
+              <p>Exporta todas tus frases a un archivo JSON o restaura una copia previa.</p>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-secondary" id="btn-export-backup">📤 Exportar Backup</button>
+              <button class="btn btn-secondary" id="btn-import-backup">📥 Importar Backup</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top: 28px;">
+          <h3>Actualizaciones de Software</h3>
+        </div>
+        <div class="settings-card">
+          <div class="update-info-container">
+            <div>
+              <h4 id="update-version-label">Versión instalada: v1.0.3</h4>
+              <p id="update-status-text">Comprueba si hay una nueva versión disponible en GitHub Releases.</p>
+            </div>
+            <button class="btn btn-primary" id="btn-check-updates">🔄 Comprobar actualizaciones ahora</button>
           </div>
         </div>
       </section>
@@ -282,8 +323,20 @@
         </div>
 
         <div class="form-group">
-          <label for="form-content">Contenido a expandir <span class="required">*</span></label>
-          <textarea id="form-content" rows="6" placeholder="Escribe aquí el texto completo o prompt que será insertado..." required></textarea>
+          <div class="label-with-tags">
+            <label for="form-content">Contenido a expandir <span class="required">*</span></label>
+            <span class="form-hint-inline">Variables dinámicas disponibles:</span>
+          </div>
+          <div class="variable-chips">
+            <button type="button" class="chip-btn" data-var="{{date}}" title="Inserta fecha actual (YYYY-MM-DD)">📅 {{date}}</button>
+            <button type="button" class="chip-btn" data-var="{{time}}" title="Inserta hora actual (HH:mm:ss)">⏰ {{time}}</button>
+            <button type="button" class="chip-btn" data-var="{{datetime}}" title="Inserta fecha y hora">📆 {{datetime}}</button>
+            <button type="button" class="chip-btn" data-var="{{clipboard}}" title="Inserta el contenido actual del portapapeles">📋 {{clipboard}}</button>
+            <button type="button" class="chip-btn" data-var="{{year}}" title="Año actual (4 dígitos)">{{year}}</button>
+            <button type="button" class="chip-btn" data-var="{{month}}" title="Mes actual (01-12)">{{month}}</button>
+            <button type="button" class="chip-btn" data-var="{{day}}" title="Día actual (01-31)">{{day}}</button>
+          </div>
+          <textarea id="form-content" rows="6" placeholder="Escribe aquí el texto completo o prompt. Puedes usar variables como {{date}}, {{time}} o {{clipboard}}..." required></textarea>
         </div>
 
         <div class="modal-footer">

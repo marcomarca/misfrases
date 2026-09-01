@@ -377,31 +377,35 @@ class MainApp {
       const tr = document.createElement('tr');
 
       const descHtml = snippet.description
-        ? `<div class="snippet-description">${this.escapeHtml(snippet.description)}</div>`
+        ? `<div class="table-desc-cell">${this.escapeHtml(snippet.description)}</div>`
         : '';
 
       tr.innerHTML = `
         <td><span class="slot-badge">${snippet.slot === 10 ? '0' : snippet.slot}</span></td>
-        <td><span class="hotkey-tag">${snippet.accelerator || '-'}</span></td>
+        <td>${this.renderKeycaps(snippet.accelerator)}</td>
         <td>
-          <div class="title-cell-container">
-            <strong>${this.escapeHtml(snippet.title)}</strong>
-            ${descHtml}
-          </div>
+          <div class="table-title-cell">${this.escapeHtml(snippet.title)}</div>
+          ${descHtml}
         </td>
-        <td><div class="content-preview">${this.escapeHtml(snippet.content)}</div></td>
-        <td style="text-align: center;">${snippet.usageCount.toLocaleString()}</td>
+        <td><div class="table-desc-cell" style="font-family: monospace;">${this.escapeHtml(snippet.content)}</div></td>
+        <td style="text-align: center; font-weight: 600;">${snippet.usageCount.toLocaleString()}</td>
         <td style="text-align: center;">
-          <label class="switch" style="transform: scale(0.75);">
+          <label class="switch" style="transform: scale(0.8);">
             <input type="checkbox" ${snippet.enabled ? 'checked' : ''} data-toggle-id="${snippet.id}">
             <span class="slider"></span>
           </label>
         </td>
         <td>
-          <div class="actions-cell">
-            <button class="btn-icon" data-edit-id="${snippet.id}" title="Editar">✏️</button>
-            <button class="btn-icon" data-duplicate-id="${snippet.id}" title="Duplicar">📋</button>
-            <button class="btn-icon danger" data-delete-id="${snippet.id}" title="Eliminar">🗑️</button>
+          <div class="table-actions">
+            <button class="action-icon-btn" data-edit-id="${snippet.id}" title="Editar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <button class="action-icon-btn" data-duplicate-id="${snippet.id}" title="Duplicar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+            <button class="action-icon-btn danger" data-delete-id="${snippet.id}" title="Eliminar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
           </div>
         </td>
       `;
@@ -801,17 +805,31 @@ class MainApp {
         : 'Nunca';
 
       tr.innerHTML = `
-        <td><strong>${this.escapeHtml(item.title)}</strong></td>
-        <td><span class="hotkey-tag">${item.accelerator}</span></td>
+        <td><div class="table-title-cell">${this.escapeHtml(item.title)}</div></td>
+        <td>${this.renderKeycaps(item.accelerator)}</td>
         <td><span class="slot-badge">${item.slot === 10 ? '0' : item.slot}</span></td>
         <td style="text-align: right; font-weight: 600;">${item.totalUsage.toLocaleString()}</td>
         <td style="text-align: right;">${item.usage7Days.toLocaleString()}</td>
         <td style="text-align: right;">${item.usage30Days.toLocaleString()}</td>
-        <td style="text-align: right; color: var(--text-muted);">${lastUsed}</td>
+        <td style="text-align: right; color: var(--text-secondary);">${lastUsed}</td>
       `;
 
       this.statsTbody.appendChild(tr);
     }
+  }
+
+  private renderKeycaps(accelerator?: string): string {
+    if (!accelerator) return '<span style="color: var(--text-tertiary);">-</span>';
+    const keys = accelerator.split('+').map((k) => k.trim());
+    const kbdTags = keys
+      .map((k) => {
+        let label = k;
+        if (label === 'Control' || label === 'CommandOrControl') label = 'Ctrl';
+        if (label === 'Option') label = 'Alt';
+        return `<kbd>${this.escapeHtml(label)}</kbd>`;
+      })
+      .join('');
+    return `<span class="keycaps-wrapper">${kbdTags}</span>`;
   }
 
   // SETTINGS

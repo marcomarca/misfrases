@@ -6,6 +6,16 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.2.0] - 2026-08-31
+
+### ✨ Añadido (Added)
+- **Rediseño UI/UX Estilo Super Whisper:** Interfaz completamente modernizada con tarjetas de configuración agrupadas por sección, divisores limpios y sombras suaves.
+- **Sistema de Tooltips Contextuales `(?)`:** Iconos de ayuda flotantes interactivos en cada opción de configuración con animaciones y descripciones detalladas.
+- **Barra Lateral con Squircles de Color:** Iconos vectoriales temáticos nítidos y píldora de navegación activa de alto contraste.
+- **Keycaps Táctiles:** Renderizado visual de atajos de teclado como teclas individuales físicas (`<kbd>Ctrl</kbd>`, `<kbd>Alt</kbd>`, `<kbd>P</kbd>`).
+
+---
+
 ## [1.1.1] - 2026-08-31
 
 ### 🐛 Corregido (Fixed)

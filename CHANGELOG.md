@@ -6,6 +6,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.0.3] - 2026-08-31
+
+### 🐛 Corregido (Fixed)
+- **Aislamiento y Sincronización del Portapapeles:** Se implementó una pausa de sincronización deliberada (30 ms) previa a la emisión de `Ctrl+V` y se activó la restauración del snapshot original (`ClipboardGuard.restore()`), eliminando condiciones de carrera que provocaban que se pegara contenido anterior o corrupto al disparar un atajo.
+- **Prevención de Conflictos con Imágenes e Historial de Windows:** Detección de formatos no seguros (imágenes, datos binarios) mediante `canSnapshotSafely()`. Ante la presencia de imágenes, el sistema conmuta automáticamente a inyección directa por `SendInput Unicode`, dejando el portapapeles y el Historial de Windows (`Win+V`) 100% intactos y libres de entradas corruptas.
+
+---
+
 ## [1.0.2] - 2026-08-31
 
 ### ✨ Añadido (Added)

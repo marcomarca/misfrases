@@ -21,9 +21,7 @@ export class ClipboardGuard implements IClipboardGuard {
 
       // Safe formats: pure text/plain or basic html
       const safeFormats = new Set(['text/plain', 'text/html', 'UTF8_STRING', 'TEXT']);
-      const hasUnsafeFormat = formats.some((fmt) => !safeFormats.has(fmt));
-
-      return !hasUnsafeFormat;
+      return formats.every((fmt) => safeFormats.has(fmt));
     } catch {
       return false;
     }

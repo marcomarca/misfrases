@@ -68,30 +68,41 @@ export class ExpansionService {
             targetHwnd: String(targetHwnd)
           });
         }
-      } else {
-        this.logger.error('expansion failure', 'Target window handle is no longer valid', undefined, {
-          targetHwnd: String(targetHwnd)
-        });
       }
 
       await this.windowsInput.waitForModifiersReleased(1000);
 
-      // 1. Copy full prompt/snippet content directly to Windows clipboard
-      this.clipboardGuard.setTemporaryText(snippet.content);
-
-      // 2. Perform instantaneous paste (Ctrl+V) via Win32 SendInput
-      const pasteOk = this.windowsInput.sendPaste();
-
       let dispatched = false;
 
-      if (pasteOk) {
-        dispatched = true;
-        // Brief pause to allow the target application to process the paste message
-        await new Promise((resolve) => setTimeout(resolve, 60));
+      // Strategy selection: Safe clipboard paste vs Direct Unicode input
+      if (this.clipboardGuard.canSnapshotSafely()) {
+        const snapshot = this.clipboardGuard.snapshot();
+        this.clipboardGuard.setTemporaryText(snippet.content);
+
+        // Brief synchronization pause so the OS clipboard buffer commits before Ctrl+V
+        await new Promise((resolve) => setTimeout(resolve, 30));
+
+        dispatched = this.windowsInput.sendPaste();
+
+        if (dispatched) {
+          // Allow target application to process and read the paste message before restoring clipboard
+          await new Promise((resolve) => setTimeout(resolve, 80));
+        } else {
+          this.logger.error('expansion failure', 'SendInput Ctrl+V paste failed', undefined, {
+            snippetId: snippet.id
+          });
+        }
+
+        // Always restore original clipboard snapshot
+        this.clipboardGuard.restore(snapshot);
       } else {
-        this.logger.error('expansion failure', 'SendInput Ctrl+V paste failed', undefined, {
-          snippetId: snippet.id
-        });
+        // Unsafe format (e.g. image or complex binary): leave clipboard intact and use Unicode SendInput
+        dispatched = this.windowsInput.sendUnicode(snippet.content);
+        if (!dispatched) {
+          this.logger.error('expansion failure', 'SendInput Unicode fallback failed', undefined, {
+            snippetId: snippet.id
+          });
+        }
       }
 
       if (dispatched) {

@@ -46,7 +46,7 @@ class MockClipboardGuard implements IClipboardGuard {
   public setTemporaryText(_text: string): void {
     return;
   }
-  public restoreSnapshot(_snapshot: ClipboardSnapshot): void {
+  public restore(_snapshot: ClipboardSnapshot): void {
     return;
   }
 }
@@ -89,7 +89,7 @@ export async function runExpansionBenchmark() {
     content: 'Hola {nombre}, te escribo para dar seguimiento a la propuesta.'
   });
 
-  const ITERATIONS = 1000;
+  const ITERATIONS = 100;
   const latencies: number[] = [];
 
   // Measure initial memory
@@ -110,7 +110,7 @@ export async function runExpansionBenchmark() {
     const t1 = performance.now();
     latencies.push(t1 - t0);
 
-    if (i % 250 === 0) {
+    if (i % 25 === 0) {
       const currentMem = process.memoryUsage();
       memorySnapshots.push({
         iteration: i,

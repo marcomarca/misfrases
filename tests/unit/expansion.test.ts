@@ -124,7 +124,7 @@ describe('ExpansionService', () => {
     );
   });
 
-  test('single snippet expands directly without opening selector popup', async () => {
+  test('single snippet with safe clipboard snapshots, pastes, and restores original clipboard', async () => {
     const group = hotkeyRepo.create('Control+Alt+1');
     snippetRepo.create({
       hotkeyGroupId: group.id,
@@ -138,6 +138,28 @@ describe('ExpansionService', () => {
     expect(windowsInput.restoredHwnd).toBe(1001);
     expect(windowsInput.pasteCalled).toBe(true);
     expect(clipboardGuard.tempText).toBe('Auto expanded text');
+    expect(clipboardGuard.restoredSnapshot).not.toBeNull();
+    expect(clipboardGuard.restoredSnapshot?.text).toBe('previous clipboard');
+
+    const stats = statsService.getSummary();
+    expect(stats.totalExpansions).toBe(1);
+  });
+
+  test('unsafe clipboard (e.g. image) bypasses clipboard mutation and uses direct Unicode input', async () => {
+    clipboardGuard.safe = false; // simulates image or non-text format in clipboard
+
+    const group = hotkeyRepo.create('Control+Alt+2');
+    snippetRepo.create({
+      hotkeyGroupId: group.id,
+      title: 'Image Preserved',
+      content: 'Unicode direct fallback'
+    });
+
+    await expansionService.handleHotkeyTrigger('Control+Alt+2');
+
+    expect(clipboardGuard.tempText).toBeNull(); // Clipboard was not modified
+    expect(windowsInput.pasteCalled).toBe(false);
+    expect(windowsInput.unicodeSent).toContain('Unicode direct fallback');
 
     const stats = statsService.getSummary();
     expect(stats.totalExpansions).toBe(1);
@@ -156,29 +178,15 @@ describe('ExpansionService', () => {
 
     // Simulate selecting snippet 2
     selectorService.triggerSelect(s2, 1001);
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     expect(windowsInput.pasteCalled).toBe(true);
     expect(clipboardGuard.tempText).toBe('Text 2');
+    expect(clipboardGuard.restoredSnapshot).not.toBeNull();
 
     const stats = statsService.getSummary();
     expect(stats.totalExpansions).toBe(1);
     expect(expansionService.getState()).toBe('READY');
-  });
-
-  test('always copies full snippet to clipboard and sends instantaneous paste', async () => {
-    const group = hotkeyRepo.create('Control+Alt+U');
-    snippetRepo.create({
-      hotkeyGroupId: group.id,
-      title: 'Prompt Expansion',
-      content: 'Texto con acentos: áéíóú ñ y prompt largo'
-    });
-
-    await expansionService.handleHotkeyTrigger('Control+Alt+U');
-
-    expect(clipboardGuard.tempText).toBe('Texto con acentos: áéíóú ñ y prompt largo');
-    expect(windowsInput.pasteCalled).toBe(true);
-    expect(statsService.getSummary().totalExpansions).toBe(1);
   });
 
   test('ignores hotkey when app state is not READY (e.g. PAUSED or EXPANDING)', async () => {
@@ -189,6 +197,7 @@ describe('ExpansionService', () => {
     await expansionService.handleHotkeyTrigger('Control+Alt+P');
 
     expect(windowsInput.pasteCalled).toBe(false);
+    expect(windowsInput.unicodeSent.length).toBe(0);
     expect(statsService.getSummary().totalExpansions).toBe(0);
   });
 });

@@ -29,10 +29,15 @@ class FakeWindowsInput implements IWindowsInputService {
   public async waitForModifiersReleased(): Promise<void> {
     return;
   }
+  public forceReleaseModifiersCalled = false;
+  public forceReleaseModifiers(): void {
+    this.forceReleaseModifiersCalled = true;
+  }
   public sendPaste(): boolean {
     this.pasteCalled = true;
-    return true;
+    return this.pasteSuccess;
   }
+  public pasteSuccess = true;
   public sendUnicode(text: string): boolean {
     this.unicodeSent.push(text);
     return true;
@@ -199,5 +204,32 @@ describe('ExpansionService', () => {
     expect(windowsInput.pasteCalled).toBe(false);
     expect(windowsInput.unicodeSent.length).toBe(0);
     expect(statsService.getSummary().totalExpansions).toBe(0);
+  });
+
+  test('falls back to sendUnicode and restores clipboard when sendPaste fails', async () => {
+    windowsInput.pasteSuccess = false; // Simulates SendInput/UIPI failure
+
+    const group = hotkeyRepo.create('Control+Alt+F');
+    snippetRepo.create({
+      hotkeyGroupId: group.id,
+      title: 'Fallback Test',
+      content: 'Resilient fallback snippet'
+    });
+
+    await expansionService.handleHotkeyTrigger('Control+Alt+F');
+
+    // Paste was attempted
+    expect(windowsInput.pasteCalled).toBe(true);
+    // Clipboard snapshot was restored immediately
+    expect(clipboardGuard.restoredSnapshot).not.toBeNull();
+    expect(clipboardGuard.restoredSnapshot?.text).toBe('previous clipboard');
+    // Unicode fallback was triggered so text was not lost
+    expect(windowsInput.unicodeSent).toContain('Resilient fallback snippet');
+    // Modifiers were force-released
+    expect(windowsInput.forceReleaseModifiersCalled).toBe(true);
+    // Usage stats recorded
+    const stats = statsService.getSummary();
+    expect(stats.totalExpansions).toBe(1);
+    expect(expansionService.getState()).toBe('READY');
   });
 });

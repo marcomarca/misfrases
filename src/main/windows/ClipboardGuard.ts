@@ -62,9 +62,11 @@ export class ClipboardGuard implements IClipboardGuard {
 
   public restore(snapshot: ClipboardSnapshot): void {
     try {
-      // Check if clipboard still contains what we placed
-      const currentText = clipboard.readText();
-      if (this.lastSetText !== null && currentText !== this.lastSetText) {
+      // Check if clipboard still contains what we placed (normalize line endings for Windows)
+      const currentText = clipboard.readText().replace(/\r\n/g, '\n');
+      const expectedText = (this.lastSetText ?? '').replace(/\r\n/g, '\n');
+
+      if (this.lastSetText !== null && currentText !== expectedText) {
         // User copied new content during paste operation, do not overwrite!
         return;
       }

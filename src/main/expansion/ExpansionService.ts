@@ -102,13 +102,23 @@ export class ExpansionService {
           // Allow target application to process and read the paste message before restoring clipboard
           await new Promise((resolve) => setTimeout(resolve, 80));
         } else {
-          this.logger.error('expansion failure', 'SendInput Ctrl+V paste failed', undefined, {
+          this.logger.warn('expansion', 'SendInput Ctrl+V paste failed, attempting Unicode fallback', {
             snippetId: snippet.id
           });
         }
 
-        // Always restore original clipboard snapshot
+        // Always restore original clipboard snapshot immediately to avoid leaving residual snippet text
         this.clipboardGuard.restore(snapshot);
+
+        // If paste failed, fallback to direct Unicode input so the user still receives their snippet
+        if (!dispatched) {
+          dispatched = this.windowsInput.sendUnicode(contentToInsert);
+          if (!dispatched) {
+            this.logger.error('expansion failure', 'Unicode fallback also failed after paste failure', undefined, {
+              snippetId: snippet.id
+            });
+          }
+        }
       } else {
         // Unsafe format (e.g. image or complex binary): leave clipboard intact and use Unicode SendInput
         dispatched = this.windowsInput.sendUnicode(contentToInsert);
@@ -134,6 +144,7 @@ export class ExpansionService {
       });
       return false;
     } finally {
+      this.windowsInput.forceReleaseModifiers();
       this.setState('READY');
     }
   }

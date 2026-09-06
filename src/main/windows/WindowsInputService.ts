@@ -5,6 +5,7 @@ export interface IWindowsInputService {
   getForegroundWindow(): WindowHandle;
   restoreForegroundWindow(hwnd: WindowHandle): Promise<boolean>;
   waitForModifiersReleased(timeoutMs?: number): Promise<void>;
+  forceReleaseModifiers(): void;
   sendPaste(): boolean;
   sendUnicode(text: string): boolean;
   isWindow(hwnd: WindowHandle): boolean;
@@ -13,6 +14,7 @@ export interface IWindowsInputService {
 const VK_SHIFT = 0x10;
 const VK_CONTROL = 0x11;
 const VK_MENU = 0x12; // Alt
+const VK_RETURN = 0x0D;
 const VK_LWIN = 0x5B;
 const VK_RWIN = 0x5C;
 const VK_V = 0x56;
@@ -20,6 +22,18 @@ const VK_V = 0x56;
 const INPUT_KEYBOARD = 1;
 const KEYEVENTF_KEYUP = 0x0002;
 const KEYEVENTF_UNICODE = 0x0004;
+
+// Win32 tagINPUT size on x64 is 40 bytes:
+// offset 0: DWORD type = 1
+// offset 4: 4 bytes padding (align union to 8 bytes)
+// offset 8: WORD wVk
+// offset 10: WORD wScan
+// offset 12: DWORD dwFlags
+// offset 16: DWORD time
+// offset 20: 4 bytes padding (align dwExtraInfo to 8 bytes)
+// offset 24: ULONG_PTR dwExtraInfo
+// offset 32: 8 bytes padding (union total size 32 bytes)
+const INPUT_SIZE_X64 = 40;
 
 export class WindowsInputService implements IWindowsInputService {
   private user32: any = null;
@@ -30,8 +44,7 @@ export class WindowsInputService implements IWindowsInputService {
   private IsWindowFunc: any;
   private GetAsyncKeyStateFunc: any;
   private SendInputFunc: any;
-
-  private INPUT_STRUCT: any;
+  private keybd_eventFunc: any;
 
   constructor() {
     if (process.platform === 'win32') {
@@ -51,50 +64,20 @@ export class WindowsInputService implements IWindowsInputService {
     this.SetForegroundWindowFunc = this.user32.func('SetForegroundWindow', 'bool', ['intptr_t']);
     this.IsWindowFunc = this.user32.func('IsWindow', 'bool', ['intptr_t']);
     this.GetAsyncKeyStateFunc = this.user32.func('GetAsyncKeyState', 'short', ['int']);
+    this.keybd_eventFunc = this.user32.func('keybd_event', 'void', ['uint8', 'uint8', 'uint32', 'uintptr_t']);
+    this.SendInputFunc = this.user32.func('SendInput', 'uint32', ['uint32', 'void *', 'int']);
+  }
 
-    // Win32 INPUT structure:
-    // typedef struct tagINPUT {
-    //   DWORD type;
-    //   union {
-    //     MOUSEINPUT    mi;
-    //     KEYBDINPUT    ki;
-    //     HARDWAREINPUT hi;
-    //   } DUMMYUNIONNAME;
-    // } INPUT, *PINPUT, *LPINPUT;
-
-    // KEYBDINPUT:
-    // typedef struct tagKEYBDINPUT {
-    //   WORD      wVk;
-    //   WORD      wScan;
-    //   DWORD     dwFlags;
-    //   DWORD     time;
-    //   ULONG_PTR dwExtraInfo;
-    // } KEYBDINPUT;
-
-    const KEYBDINPUT = koffi.struct('KEYBDINPUT', {
-      wVk: 'uint16',
-      wScan: 'uint16',
-      dwFlags: 'uint32',
-      time: 'uint32',
-      dwExtraInfo: 'uintptr_t'
-    });
-
-    const INPUT_UNION = koffi.union('INPUT_UNION', {
-      ki: KEYBDINPUT,
-      // padding to ensure 64-bit alignment matching largest union member (MOUSEINPUT is 32 bytes on x64)
-      dummy: koffi.array('uint8', 32)
-    });
-
-    this.INPUT_STRUCT = koffi.struct('INPUT', {
-      type: 'uint32',
-      u: INPUT_UNION
-    });
-
-    this.SendInputFunc = this.user32.func('SendInput', 'uint32', [
-      'uint32',
-      koffi.pointer(this.INPUT_STRUCT),
-      'int'
-    ]);
+  private writeKeyboardInput(buffer: Buffer, offset: number, vk: number, scan: number, flags: number): void {
+    buffer.writeUInt32LE(INPUT_KEYBOARD, offset + 0);
+    buffer.writeUInt32LE(0, offset + 4);
+    buffer.writeUInt16LE(vk, offset + 8);
+    buffer.writeUInt16LE(scan, offset + 10);
+    buffer.writeUInt32LE(flags, offset + 12);
+    buffer.writeUInt32LE(0, offset + 16);
+    buffer.writeUInt32LE(0, offset + 20);
+    buffer.writeBigUInt64LE(0n, offset + 24);
+    buffer.writeBigUInt64LE(0n, offset + 32);
   }
 
   public getForegroundWindow(): WindowHandle {
@@ -129,6 +112,25 @@ export class WindowsInputService implements IWindowsInputService {
     return ok;
   }
 
+  public forceReleaseModifiers(): void {
+    if (!this.isAvailable) {
+      return;
+    }
+
+    const keysToRelease = [VK_V, VK_CONTROL, VK_MENU, VK_SHIFT, VK_LWIN, VK_RWIN];
+
+    // Use keybd_event to immediately update OS virtual key state table
+    if (this.keybd_eventFunc) {
+      for (const vk of keysToRelease) {
+        try {
+          this.keybd_eventFunc(vk, 0, KEYEVENTF_KEYUP, 0);
+        } catch {
+          // Ignore key release error
+        }
+      }
+    }
+  }
+
   public async waitForModifiersReleased(timeoutMs = 1000): Promise<void> {
     if (!this.isAvailable || !this.GetAsyncKeyStateFunc) {
       return;
@@ -145,91 +147,126 @@ export class WindowsInputService implements IWindowsInputService {
       const rwin = isPressed(VK_RWIN);
 
       if (!ctrl && !alt && !shift && !lwin && !rwin) {
-        return;
+        break;
       }
 
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
+
+    // Explicitly unlatch any logical modifier state in the OS input queue
+    this.forceReleaseModifiers();
   }
 
   public sendPaste(): boolean {
-    if (!this.isAvailable || !this.SendInputFunc) {
+    if (!this.isAvailable) {
       return false;
     }
 
-    // Sequence: Ctrl Down, V Down, V Up, Ctrl Up
-    const inputs = [
-      {
-        type: INPUT_KEYBOARD,
-        u: { ki: { wVk: VK_CONTROL, wScan: 0, dwFlags: 0, time: 0, dwExtraInfo: 0 } }
-      },
-      {
-        type: INPUT_KEYBOARD,
-        u: { ki: { wVk: VK_V, wScan: 0, dwFlags: 0, time: 0, dwExtraInfo: 0 } }
-      },
-      {
-        type: INPUT_KEYBOARD,
-        u: { ki: { wVk: VK_V, wScan: 0, dwFlags: KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } }
-      },
-      {
-        type: INPUT_KEYBOARD,
-        u: { ki: { wVk: VK_CONTROL, wScan: 0, dwFlags: KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } }
-      }
-    ];
+    // Pre-sanitize modifier states to avoid dirty combinations
+    this.forceReleaseModifiers();
 
-    const structSize = koffi.sizeof(this.INPUT_STRUCT);
-    const sent = this.SendInputFunc(inputs.length, inputs, structSize);
-    return sent === inputs.length;
+    let success = false;
+
+    // 1. Attempt Win32 SendInput with contiguous buffer
+    if (this.SendInputFunc) {
+      try {
+        const buffer = Buffer.alloc(4 * INPUT_SIZE_X64);
+        this.writeKeyboardInput(buffer, 0 * INPUT_SIZE_X64, VK_CONTROL, 0, 0);
+        this.writeKeyboardInput(buffer, 1 * INPUT_SIZE_X64, VK_V, 0, 0);
+        this.writeKeyboardInput(buffer, 2 * INPUT_SIZE_X64, VK_V, 0, KEYEVENTF_KEYUP);
+        this.writeKeyboardInput(buffer, 3 * INPUT_SIZE_X64, VK_CONTROL, 0, KEYEVENTF_KEYUP);
+
+        const sent = this.SendInputFunc(4, buffer, INPUT_SIZE_X64);
+        if (sent === 4) {
+          success = true;
+        }
+      } catch (err) {
+        console.error('SendInput paste error:', err);
+      }
+    }
+
+    // 2. Resilient fallback to keybd_event if SendInput failed or was blocked by UIPI
+    if (!success && this.keybd_eventFunc) {
+      try {
+        this.keybd_eventFunc(VK_CONTROL, 0, 0, 0);
+        this.keybd_eventFunc(VK_V, 0, 0, 0);
+        this.keybd_eventFunc(VK_V, 0, KEYEVENTF_KEYUP, 0);
+        this.keybd_eventFunc(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
+        success = true;
+      } catch (err) {
+        console.error('keybd_event paste fallback error:', err);
+      }
+    }
+
+    // Post-sanitize: ensure neither V nor Ctrl remains held down in any queue
+    this.forceReleaseModifiers();
+
+    return success;
   }
 
   public sendUnicode(text: string): boolean {
-    if (!this.isAvailable || !this.SendInputFunc || !text) {
+    if (!this.isAvailable || !text) {
       return false;
     }
 
-    const inputs: any[] = [];
+    this.forceReleaseModifiers();
 
     // Normalize CRLF
     const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
+    interface KeyAction {
+      vk: number;
+      scan: number;
+      flags: number;
+    }
+
+    const actions: KeyAction[] = [];
+
     for (let i = 0; i < normalized.length; i++) {
-      const charCode = normalized.charCodeAt(i);
-
       if (normalized[i] === '\n') {
-        // VK_RETURN down & up
-        inputs.push({
-          type: INPUT_KEYBOARD,
-          u: { ki: { wVk: 0x0D, wScan: 0, dwFlags: 0, time: 0, dwExtraInfo: 0 } }
-        });
-        inputs.push({
-          type: INPUT_KEYBOARD,
-          u: { ki: { wVk: 0x0D, wScan: 0, dwFlags: KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } }
-        });
+        actions.push({ vk: VK_RETURN, scan: 0, flags: 0 });
+        actions.push({ vk: VK_RETURN, scan: 0, flags: KEYEVENTF_KEYUP });
       } else {
-        // Send KEYEVENTF_UNICODE
-        inputs.push({
-          type: INPUT_KEYBOARD,
-          u: { ki: { wVk: 0, wScan: charCode, dwFlags: KEYEVENTF_UNICODE, time: 0, dwExtraInfo: 0 } }
-        });
-        inputs.push({
-          type: INPUT_KEYBOARD,
-          u: { ki: { wVk: 0, wScan: charCode, dwFlags: KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } }
-        });
+        const charCode = normalized.charCodeAt(i);
+        actions.push({ vk: 0, scan: charCode, flags: KEYEVENTF_UNICODE });
+        actions.push({ vk: 0, scan: charCode, flags: KEYEVENTF_UNICODE | KEYEVENTF_KEYUP });
       }
     }
 
-    const structSize = koffi.sizeof(this.INPUT_STRUCT);
+    let allSent = true;
 
-    // Send in chunks of 100 inputs to prevent buffer limits
-    const CHUNK_SIZE = 100;
-    for (let i = 0; i < inputs.length; i += CHUNK_SIZE) {
-      const chunk = inputs.slice(i, i + CHUNK_SIZE);
-      const sent = this.SendInputFunc(chunk.length, chunk, structSize);
-      if (sent !== chunk.length) {
-        return false;
+    if (this.SendInputFunc) {
+      const CHUNK_SIZE = 50;
+      for (let i = 0; i < actions.length; i += CHUNK_SIZE) {
+        const chunk = actions.slice(i, i + CHUNK_SIZE);
+        const buffer = Buffer.alloc(chunk.length * INPUT_SIZE_X64);
+        for (let j = 0; j < chunk.length; j++) {
+          this.writeKeyboardInput(buffer, j * INPUT_SIZE_X64, chunk[j].vk, chunk[j].scan, chunk[j].flags);
+        }
+
+        const sent = this.SendInputFunc(chunk.length, buffer, INPUT_SIZE_X64);
+        if (sent !== chunk.length) {
+          allSent = false;
+          break;
+        }
+      }
+    } else {
+      allSent = false;
+    }
+
+    // If SendInput failed, attempt keybd_event for unicode events
+    if (!allSent && this.keybd_eventFunc) {
+      try {
+        for (const act of actions) {
+          this.keybd_eventFunc(act.vk, act.scan, act.flags, 0);
+        }
+        allSent = true;
+      } catch (err) {
+        console.error('keybd_event unicode fallback error:', err);
       }
     }
 
-    return true;
+    this.forceReleaseModifiers();
+    return allSent;
   }
 }

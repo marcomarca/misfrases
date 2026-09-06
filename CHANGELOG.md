@@ -6,6 +6,16 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.3.1] - 2026-09-06
+
+### 🐛 Corregido (Fixed)
+- **Serialización Win32 en SendInput y Soporte x64:** Empaquetado binario contiguo de 40 bytes para la estructura nativa `tagINPUT` con alineación de 8 bytes en `dwExtraInfo`, corrigiendo el fallo sistemático en `sendPaste()`.
+- **Prevención de Atascamiento de Teclas (Key Latching):** Se implementó `forceReleaseModifiers()` para purgar `VK_CONTROL`, `VK_MENU` (Alt), `VK_SHIFT`, `VK_LWIN`, `VK_RWIN` y `VK_V` en el arranque del sistema (`bootstrap()`), apagado (`shutdown()`) y alrededor de cada inyección de texto. Evita que atajos ajenos (como `Ctrl+N` en navegadores) ejecuten pegados involuntarios.
+- **Normalización de Saltos de Línea en Portapapeles:** Normalización CRLF/LF en `ClipboardGuard.restore()`, evitando que la conversión interna de saltos de línea de Windows bloquee la restauración del portapapeles y deje frases residuales.
+- **Resiliencia con Fallback a `keybd_event` y Unicode:** Si `SendInput` es bloqueado por UIPI o falla, se ejecuta fallback a `keybd_event` y a inyección Unicode directa.
+
+---
+
 ## [1.3.0] - 2026-09-01
 
 ### ✨ Añadido (Added)

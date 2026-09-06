@@ -86,6 +86,9 @@ export class AppLifecycleService {
     // 6. Initialize services
     this.hotkeyService = new HotkeyService(this.hotkeyRepo, this.snippetRepo);
     this.windowsInput = new WindowsInputService();
+    this.windowsInput.forceReleaseModifiers();
+    this.logger.info('startup', 'Sanitized OS keyboard modifiers on boot');
+
     this.clipboardGuard = new ClipboardGuard();
     this.statsService = new StatisticsService(this.usageRepo);
     this.selectorService = new SelectorWindowService();
@@ -261,6 +264,7 @@ export class AppLifecycleService {
 
   public shutdown(): void {
     this.logger.info('shutdown', 'Application shutting down');
+    this.windowsInput?.forceReleaseModifiers();
     this.expansionService?.setState('SHUTTING_DOWN');
     this.selectorService?.close();
     this.hotkeyService?.unregisterAll();

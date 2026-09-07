@@ -6,6 +6,20 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.4.0] - 2026-09-06
+
+### ✨ Añadido (Added)
+- **Sistema de Memoria IA (Context Blocks):** Módulo para definir, editar y componer bloques de contexto y memoria reutilizables (perfil base, stack de software, stack de hardware, principios de arquitectura y directrices personalizadas) con base de datos SQLite v3.
+- **Acceso Rápido en Selector Flotante (Teclas QWER):** Barra superior de memoria compacta en el selector de atajos para inyectar bloques con teclas dedicadas (`Q`, `W`, `E`, `R`, `T`, `Y`) sin cerrar el menú selector.
+- **Inserción Dinámica en Editor de Prompts:** Chips interactivos para insertar macros `{{@clave}}` en la posición del cursor dentro de cualquier frase.
+- **Copia de Seguridad y Restauración de Memoria:** Exportación e importación de bloques de memoria en formato JSON compatible con versiones anteriores.
+
+### ⚡ Rendimiento y Estabilidad (Performance & Stability)
+- **Pipeline Unificado de Portapapeles de Alta Velocidad:** Eliminación de la escritura tecla a tecla lenta; todas las frases y bloques de memoria se inyectan a través del portapapeles con `Ctrl+V` nativo y restauración instantánea de datos previos (texto, HTML e imágenes).
+- **Separación Limpia de Bloques con Salto de Línea:** Adición automática de carácter `\n` al pegar bloques en cadena, evitando eventos de tecla `Enter` simulados que puedan disparar envíos accidentales en chats o interfaces web de IA.
+
+---
+
 ## [1.3.1] - 2026-09-06
 
 ### 🐛 Corregido (Fixed)

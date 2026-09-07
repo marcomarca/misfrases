@@ -59,6 +59,80 @@ body {
   color: var(--text-muted);
 }
 
+.selector-memory-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 2px 2px 4px 2px;
+}
+
+.selector-memory-bar:empty {
+  display: none;
+}
+
+.selector-memory-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.memory-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--bg-item);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 6px;
+  padding: 3px 7px;
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+  outline: none;
+}
+
+.memory-chip-btn:hover {
+  background-color: var(--bg-item-hover);
+  border-color: var(--primary);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.memory-chip-btn.pasting {
+  background-color: rgba(34, 197, 94, 0.25) !important;
+  border-color: #22c55e !important;
+  color: #86efac !important;
+}
+
+.memory-key-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background-color: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 10px;
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.memory-chip-btn.pasting .memory-key-badge {
+  background-color: rgba(34, 197, 94, 0.3);
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.memory-chip-label {
+  font-size: 11px;
+  line-height: 1;
+}
+
 .selector-list {
   display: flex;
   flex-direction: column;

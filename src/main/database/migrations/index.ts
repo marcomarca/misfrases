@@ -83,6 +83,66 @@ export const migrations: Migration[] = [
         `);
       }
     }
+  },
+  {
+    version: 3,
+    up: (db: IDatabase) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS context_blocks (
+          id TEXT PRIMARY KEY,
+          key TEXT NOT NULL UNIQUE,
+          title TEXT NOT NULL,
+          content TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_context_blocks_key ON context_blocks(key);
+      `);
+
+      const countRow = db.prepare('SELECT COUNT(*) as count FROM context_blocks').get() as { count: number };
+      if (countRow.count === 0) {
+        const now = Date.now();
+        const insertStmt = db.prepare(
+          'INSERT INTO context_blocks (id, key, title, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+
+        const defaultBlocks = [
+          {
+            id: 'cb-default-perfil-base',
+            key: 'perfil_base',
+            title: 'Perfil Base',
+            content:
+              'Rol: Ingeniero Electrónico y Desarrollador de Software.\nEstilo de respuesta: Directo, técnico y conciso. Sin introducciones, sin felicitaciones ni relleno.\nExigencia de código: Producción, tipado fuerte, manejo explícito de errores y casos de borde.'
+          },
+          {
+            id: 'cb-default-stack-software',
+            key: 'stack_software',
+            title: 'Stack de Software',
+            content:
+              'Runtimes: Bun (preferido para scripts y tooling), Node.js (LTS), Python 3.11+.\nLenguajes: TypeScript (estricto), Python (mypy, tipado PEP 484).\nDesktop: Electron (arquitectura de procesos aislados), Win32 FFI (Koffi/ctypes).\nBases de datos: SQLite con modo WAL y transacciones explícitas.'
+          },
+          {
+            id: 'cb-default-stack-hardware',
+            key: 'stack_hardware',
+            title: 'Stack de Hardware',
+            content:
+              'Microcontroladores: ESP32 (FreeRTOS), STM32 (C/C++), RP2040.\nProtocolos: UART, I2C, SPI, Modbus, MQTT, Bluetooth LE.\nEnfoque de firmware: Concurrencia no bloqueante, colas de mensajes, bajo consumo y control de interrupciones.'
+          },
+          {
+            id: 'cb-default-principios-arq',
+            key: 'principios_arquitectura',
+            title: 'Principios de Arquitectura',
+            content:
+              '1. Simplicidad: Preferir APIs nativas del SO o del lenguaje antes que añadir dependencias de terceros.\n2. Robusto y mantenible: Código modular con separación clara de capas (dominio, infraestructura, UI).\n3. Testing: Toda lógica central debe tener tests unitarios automatizados deterministas.\n4. Rendimiento en Windows: No bloquear hilos de UI; cuidar latencia en colas de mensajes y portapapeles.'
+          }
+        ];
+
+        for (const b of defaultBlocks) {
+          insertStmt.run(b.id, b.key, b.title, b.content, now, now);
+        }
+      }
+    }
   }
 ];
 

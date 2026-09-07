@@ -8,13 +8,15 @@ import { ExpansionService } from '../../src/main/expansion/ExpansionService';
 import type { IWindowsInputService } from '../../src/main/windows/WindowsInputService';
 import type { IClipboardGuard } from '../../src/main/windows/ClipboardGuard';
 import type { SelectorWindowService } from '../../src/main/popup/SelectorWindowService';
-import type { ClipboardSnapshot, Snippet, WindowHandle } from '../../src/shared/types';
+import { ContextBlockRepository } from '../../src/main/database/repositories/ContextBlockRepository';
+import type { ClipboardSnapshot, ContextBlock, Snippet, WindowHandle } from '../../src/shared/types';
 
 class FakeWindowsInput implements IWindowsInputService {
   public foregroundHwnd: WindowHandle = 1001;
   public restoredHwnd: WindowHandle | null = null;
   public pasteCalled = false;
   public unicodeSent: string[] = [];
+  public forceReleaseModifiersCalled = false;
 
   public getForegroundWindow(): WindowHandle {
     return this.foregroundHwnd;
@@ -26,18 +28,17 @@ class FakeWindowsInput implements IWindowsInputService {
     this.restoredHwnd = hwnd;
     return true;
   }
-  public async waitForModifiersReleased(): Promise<void> {
+  public async waitForModifiersReleased(_timeoutMs?: number): Promise<void> {
     return;
   }
-  public forceReleaseModifiersCalled = false;
   public forceReleaseModifiers(): void {
     this.forceReleaseModifiersCalled = true;
   }
+  public pasteSuccess = true;
   public sendPaste(): boolean {
     this.pasteCalled = true;
     return this.pasteSuccess;
   }
-  public pasteSuccess = true;
   public sendUnicode(text: string): boolean {
     this.unicodeSent.push(text);
     return true;
@@ -70,24 +71,31 @@ class FakeClipboardGuard implements IClipboardGuard {
 }
 
 class FakeSelectorService {
-  public openedWith: { targetHwnd: WindowHandle; snippets: Snippet[] } | null = null;
+  public openedWith: { targetHwnd: WindowHandle; snippets: Snippet[]; contextBlocks?: ContextBlock[] } | null = null;
   private onSelect: ((snippet: Snippet, targetHwnd: WindowHandle) => void) | null = null;
   private onCancel: (() => void) | null = null;
+  private onPasteContext: ((blockId: string, targetHwnd: WindowHandle) => Promise<boolean>) | null = null;
 
   public setCallbacks(
     onSelect: (snippet: Snippet, targetHwnd: WindowHandle) => void,
-    onCancel: () => void
+    onCancel: () => void,
+    onPasteContext?: (blockId: string, targetHwnd: WindowHandle) => Promise<boolean>
   ): void {
     this.onSelect = onSelect;
     this.onCancel = onCancel;
+    this.onPasteContext = onPasteContext || null;
   }
 
-  public open(targetHwnd: WindowHandle, snippets: Snippet[]): void {
-    this.openedWith = { targetHwnd, snippets };
+  public open(targetHwnd: WindowHandle, snippets: Snippet[], contextBlocks?: ContextBlock[]): void {
+    this.openedWith = { targetHwnd, snippets, contextBlocks };
   }
 
   public triggerSelect(snippet: Snippet, targetHwnd: WindowHandle): void {
     this.onSelect?.(snippet, targetHwnd);
+  }
+
+  public triggerPasteContext(blockId: string, targetHwnd: WindowHandle): Promise<boolean> | undefined {
+    return this.onPasteContext?.(blockId, targetHwnd);
   }
 
   public triggerCancel(): void {
@@ -150,21 +158,20 @@ describe('ExpansionService', () => {
     expect(stats.totalExpansions).toBe(1);
   });
 
-  test('unsafe clipboard (e.g. image) bypasses clipboard mutation and uses direct Unicode input', async () => {
-    clipboardGuard.safe = false; // simulates image or non-text format in clipboard
-
+  test('always uses clipboard paste and restores original clipboard for maximum performance', async () => {
     const group = hotkeyRepo.create('Control+Alt+2');
     snippetRepo.create({
       hotkeyGroupId: group.id,
-      title: 'Image Preserved',
-      content: 'Unicode direct fallback'
+      title: 'Prompt Gigante',
+      content: 'Contenido extenso de prompt que debe ser pegado instantáneamente'
     });
 
     await expansionService.handleHotkeyTrigger('Control+Alt+2');
 
-    expect(clipboardGuard.tempText).toBeNull(); // Clipboard was not modified
-    expect(windowsInput.pasteCalled).toBe(false);
-    expect(windowsInput.unicodeSent).toContain('Unicode direct fallback');
+    expect(clipboardGuard.tempText).toBe('Contenido extenso de prompt que debe ser pegado instantáneamente');
+    expect(windowsInput.pasteCalled).toBe(true);
+    expect(clipboardGuard.restoredSnapshot).not.toBeNull();
+    expect(clipboardGuard.restoredSnapshot?.text).toBe('previous clipboard');
 
     const stats = statsService.getSummary();
     expect(stats.totalExpansions).toBe(1);
@@ -206,7 +213,7 @@ describe('ExpansionService', () => {
     expect(statsService.getSummary().totalExpansions).toBe(0);
   });
 
-  test('falls back to sendUnicode and restores clipboard when sendPaste fails', async () => {
+  test('restores clipboard and releases modifiers when sendPaste fails', async () => {
     windowsInput.pasteSuccess = false; // Simulates SendInput/UIPI failure
 
     const group = hotkeyRepo.create('Control+Alt+F');
@@ -223,13 +230,38 @@ describe('ExpansionService', () => {
     // Clipboard snapshot was restored immediately
     expect(clipboardGuard.restoredSnapshot).not.toBeNull();
     expect(clipboardGuard.restoredSnapshot?.text).toBe('previous clipboard');
-    // Unicode fallback was triggered so text was not lost
-    expect(windowsInput.unicodeSent).toContain('Resilient fallback snippet');
     // Modifiers were force-released
     expect(windowsInput.forceReleaseModifiersCalled).toBe(true);
-    // Usage stats recorded
-    const stats = statsService.getSummary();
-    expect(stats.totalExpansions).toBe(1);
     expect(expansionService.getState()).toBe('READY');
   });
+
+  test('pastes context block directly into targetHwnd when triggered from selector', async () => {
+    const contextBlockRepo = new ContextBlockRepository(db.getRawDb());
+    expansionService = new ExpansionService(
+      windowsInput as any,
+      clipboardGuard as any,
+      statsService,
+      snippetRepo,
+      selectorService as any,
+      contextBlockRepo
+    );
+
+    const group = hotkeyRepo.create('Control+Alt+K');
+    snippetRepo.create({ hotkeyGroupId: group.id, title: 'F1', content: 'C1', slot: 1 });
+    snippetRepo.create({ hotkeyGroupId: group.id, title: 'F2', content: 'C2', slot: 2 });
+
+    await expansionService.handleHotkeyTrigger('Control+Alt+K');
+    expect(selectorService.openedWith).not.toBeNull();
+    expect(selectorService.openedWith?.contextBlocks?.length).toBe(4);
+
+    const perfil = contextBlockRepo.getByKey('perfil_base');
+    expect(perfil).not.toBeNull();
+
+    const success = await selectorService.triggerPasteContext(perfil!.id, 4444 as any);
+    expect(success).toBe(true);
+    expect(clipboardGuard.tempText).toContain('Ingeniero Electrónico');
+    expect(clipboardGuard.tempText.endsWith('\n')).toBe(true);
+    expect(windowsInput.pasteCalled).toBe(true);
+  });
 });
+

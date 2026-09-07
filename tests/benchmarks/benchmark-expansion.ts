@@ -22,6 +22,9 @@ class MockWindowsInput implements IWindowsInputService {
   public async waitForModifiersReleased(): Promise<void> {
     return;
   }
+  public forceReleaseModifiers(): void {
+    return;
+  }
   public sendPaste(): boolean {
     return true;
   }

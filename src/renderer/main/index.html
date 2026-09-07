@@ -46,10 +46,17 @@
 
       <nav class="nav-menu">
         <button class="nav-item active" data-tab="snippets">
-          <span class="nav-icon-badge nav-icon-orange">
+          <span class="nav-icon-badge nav-icon-purple">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           </span>
           <span class="nav-label">Mis Frases</span>
+        </button>
+
+        <button class="nav-item" data-tab="context">
+          <span class="nav-icon-badge nav-icon-indigo">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+          </span>
+          <span class="nav-label">Memoria IA</span>
         </button>
 
         <button class="nav-item" data-tab="reorder">
@@ -118,6 +125,37 @@
           <div class="empty-icon-circle">📂</div>
           <h3>No hay frases encontradas</h3>
           <p>No hay frases registradas o ninguna coincide con tu búsqueda.</p>
+        </div>
+      </section>
+
+      <!-- Context Blocks View -->
+      <section id="tab-context" class="tab-pane">
+        <header class="view-header">
+          <div class="header-titles">
+            <h1>Memoria y Contexto IA</h1>
+            <p>Bloques de información reutilizables para tus prompts y modelos (perfil, stack, reglas)</p>
+          </div>
+          <button class="btn btn-primary" id="btn-new-context-block">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Nuevo Bloque
+          </button>
+        </header>
+
+        <div class="toolbar">
+          <div class="search-box">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="context-search-input" placeholder="Buscar bloques por clave, título o contenido...">
+          </div>
+        </div>
+
+        <div class="context-blocks-container" id="context-blocks-container">
+          <!-- Rendered via JS -->
+        </div>
+
+        <div id="context-empty" class="empty-state hidden">
+          <div class="empty-icon-circle">🧠</div>
+          <h3>No hay bloques de contexto</h3>
+          <p>Crea bloques reutilizables para componer prompts fácilmente con etiquetas <code>{{@clave}}</code>.</p>
         </div>
       </section>
 
@@ -506,12 +544,66 @@
               </div>
             </div>
           </div>
-          <textarea id="form-content" rows="5" placeholder="Escribe aquí el texto completo o prompt. Puedes usar variables dinámicas..." required class="input-clean"></textarea>
+
+          <div class="context-chips-wrapper" id="snippet-context-chips-wrapper">
+            <div class="context-chips-label-row">
+              <span class="context-chips-title">Memoria IA disponible:</span>
+              <span class="form-hint-inline">Haz clic para insertar en el prompt</span>
+            </div>
+            <div class="context-chips" id="snippet-context-chips">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+          <textarea id="form-content" rows="5" placeholder="Escribe aquí el texto completo o prompt. Puedes usar variables dinámicas o bloques @memoria..." required class="input-clean"></textarea>
         </div>
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="btn-cancel-modal">Cancelar</button>
           <button type="submit" class="btn btn-primary" id="btn-save-snippet">Guardar Frase</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Context Block Modal (Create / Edit) -->
+  <div class="modal-backdrop hidden" id="modal-context-block">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-context-title">Nuevo Bloque de Memoria IA</h3>
+        <button class="modal-close" id="btn-close-context-modal" aria-label="Cerrar">&times;</button>
+      </div>
+      <form id="form-context-block">
+        <input type="hidden" id="context-block-id">
+
+        <div class="form-group">
+          <div class="label-with-tags">
+            <label for="context-block-key">Clave del Bloque <span class="required">*</span></label>
+            <span class="form-hint-inline">Identificador único</span>
+          </div>
+          <div class="keycap-input-row">
+            <span class="keycap-prefix">@</span>
+            <input type="text" id="context-block-key" maxlength="50" placeholder="ej: stack_python, perfil_dev" required class="input-clean" pattern="[a-zA-Z0-9_-]+">
+          </div>
+          <span class="form-hint">Invócalo en cualquier frase escribiendo <code id="context-key-preview">{{@clave}}</code> o <code>{{context:clave}}</code>.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="context-block-title">Título Descriptivo <span class="required">*</span></label>
+          <input type="text" id="context-block-title" maxlength="100" placeholder="Ej: Mi Stack de Software Principal" required class="input-clean">
+        </div>
+
+        <div class="form-group">
+          <div class="label-with-tags">
+            <label for="context-block-content">Contenido de Memoria / Contexto <span class="required">*</span></label>
+            <span class="form-hint-inline" id="context-char-count">0 caracteres</span>
+          </div>
+          <textarea id="context-block-content" rows="8" placeholder="Escribe aquí las instrucciones, bio, stack o directrices que la IA debe tomar en cuenta..." required class="input-clean"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-context-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-context-block">Guardar Bloque</button>
         </div>
       </form>
     </div>

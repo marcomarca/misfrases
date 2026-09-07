@@ -48,6 +48,7 @@ export interface ClipboardSnapshot {
   hasHtml: boolean;
   html?: string;
   hasImage: boolean;
+  image?: any;
   formats: string[];
   sequenceNumber?: number;
 }
@@ -114,10 +115,42 @@ export interface BackupSnippetData {
   updatedAt?: number;
 }
 
+export interface ContextBlock {
+  id: string;
+  key: string;
+  title: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CreateContextBlockInput {
+  key: string;
+  title: string;
+  content: string;
+}
+
+export interface UpdateContextBlockInput {
+  id: string;
+  key?: string;
+  title?: string;
+  content?: string;
+}
+
+export interface BackupContextBlockData {
+  id: string;
+  key: string;
+  title: string;
+  content: string;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
 export interface BackupData {
   version: string;
   exportedAt: number;
   snippets: BackupSnippetData[];
+  contextBlocks?: BackupContextBlockData[];
 }
 
 export interface ExportBackupResult {
@@ -125,6 +158,7 @@ export interface ExportBackupResult {
   canceled?: boolean;
   filePath?: string;
   snippetCount?: number;
+  contextBlockCount?: number;
   error?: string;
 }
 
@@ -132,6 +166,7 @@ export interface ImportBackupResult {
   success: boolean;
   canceled?: boolean;
   importedCount?: number;
+  contextBlockCount?: number;
   error?: string;
 }
 
@@ -141,3 +176,9 @@ export interface UpdateCheckResult {
   latestVersion?: string;
   message?: string;
 }
+
+export interface SelectorPayload {
+  snippets: Snippet[];
+  contextBlocks: ContextBlock[];
+}
+

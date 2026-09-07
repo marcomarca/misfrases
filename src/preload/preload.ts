@@ -2,14 +2,18 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { IPC_CHANNELS } from '../shared/constants';
 import type {
   AppSettings,
+  ContextBlock,
+  CreateContextBlockInput,
   CreateSnippetInput,
   ExportBackupResult,
   ImportBackupResult,
   ReorderSnippetsInput,
+  SelectorPayload,
   Snippet,
   SnippetStats,
   StatsSummary,
   UpdateCheckResult,
+  UpdateContextBlockInput,
   UpdateSnippetInput,
   ValidateHotkeyResult
 } from '../shared/types';
@@ -29,6 +33,17 @@ const appApi = {
       ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_DUPLICATE, id),
     reorder: (input: ReorderSnippetsInput): Promise<{ success: boolean }> =>
       ipcRenderer.invoke(IPC_CHANNELS.SNIPPETS_REORDER, input)
+  },
+  contextBlocks: {
+    list: (): Promise<ContextBlock[]> => ipcRenderer.invoke(IPC_CHANNELS.CONTEXT_BLOCKS_LIST),
+    get: (id: string): Promise<ContextBlock | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CONTEXT_BLOCKS_GET, id),
+    create: (input: CreateContextBlockInput): Promise<ContextBlock> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CONTEXT_BLOCKS_CREATE, input),
+    update: (input: UpdateContextBlockInput): Promise<ContextBlock> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CONTEXT_BLOCKS_UPDATE, input),
+    remove: (id: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CONTEXT_BLOCKS_REMOVE, id)
   },
   hotkeys: {
     validate: (accelerator: string): Promise<ValidateHotkeyResult> =>
@@ -62,9 +77,11 @@ const appApi = {
     quit: (): Promise<{ success: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.RUNTIME_QUIT)
   },
   selector: {
-    getData: (): Promise<Snippet[]> => ipcRenderer.invoke(IPC_CHANNELS.SELECTOR_GET_DATA),
+    getData: (): Promise<SelectorPayload> => ipcRenderer.invoke(IPC_CHANNELS.SELECTOR_GET_DATA),
     select: (slot: number): Promise<{ success: boolean }> =>
       ipcRenderer.invoke(IPC_CHANNELS.SELECTOR_SELECT, slot),
+    pasteContextBlock: (blockId: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SELECTOR_PASTE_CONTEXT, blockId),
     cancel: (): Promise<{ success: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.SELECTOR_CANCEL)
   },
   window: {

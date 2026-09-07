@@ -54,4 +54,37 @@ describe('TemplateEngine', () => {
 
     expect(rendered).toBe('Hola {{nombre}}, hoy es 2026-08-31 y tu código es {{custom_token}}');
   });
+
+  test('resolves context blocks with {{@key}}, {{context:key}}, and {{key}}', () => {
+    const contextBlocks = {
+      perfil_base: 'Ingeniero Electrónico y Dev',
+      stack_software: 'Bun, TypeScript, Electron',
+      principios: 'Código limpio y sin dependencias innecesarias'
+    };
+
+    const template =
+      'Perfil: {{@perfil_base}}\nStack: {{context:stack_software}}\nDirectriz: {{principios}}\nFecha: {{date}}';
+    const fixedDate = new Date(2026, 7, 31, 10, 0, 0);
+
+    const rendered = TemplateEngine.render(template, {
+      date: fixedDate,
+      contextBlocks
+    });
+
+    expect(rendered).toBe(
+      'Perfil: Ingeniero Electrónico y Dev\nStack: Bun, TypeScript, Electron\nDirectriz: Código limpio y sin dependencias innecesarias\nFecha: 2026-08-31'
+    );
+  });
+
+  test('handles spaces in context block tags and leaves missing context keys untouched', () => {
+    const contextBlocks = {
+      perfil_dev: 'Perfil de Desarrollador'
+    };
+
+    const template = '{{  @perfil_dev  }} | {{ context: missing_block }} | {{@inexistente}}';
+    const rendered = TemplateEngine.render(template, { contextBlocks });
+
+    expect(rendered).toBe('Perfil de Desarrollador | {{ context: missing_block }} | {{@inexistente}}');
+  });
 });
+

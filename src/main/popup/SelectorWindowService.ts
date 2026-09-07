@@ -1,21 +1,26 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { BrowserWindow, screen } from 'electron';
-import type { Snippet, WindowHandle } from '../../shared/types';
+import type { ContextBlock, SelectorPayload, Snippet, WindowHandle } from '../../shared/types';
 
 export class SelectorWindowService {
   private window: BrowserWindow | null = null;
   private currentSnippets: Snippet[] = [];
+  private currentContextBlocks: ContextBlock[] = [];
   private targetHwnd: WindowHandle = 0;
+  private isPastingContext = false;
   private onSelectCallback: ((snippet: Snippet, targetHwnd: WindowHandle) => void) | null = null;
   private onCancelCallback: (() => void) | null = null;
+  private onPasteContextCallback: ((blockId: string, targetHwnd: WindowHandle) => Promise<boolean>) | null = null;
 
   public setCallbacks(
     onSelect: (snippet: Snippet, targetHwnd: WindowHandle) => void,
-    onCancel: () => void
+    onCancel: () => void,
+    onPasteContext?: (blockId: string, targetHwnd: WindowHandle) => Promise<boolean>
   ): void {
     this.onSelectCallback = onSelect;
     this.onCancelCallback = onCancel;
+    this.onPasteContextCallback = onPasteContext || null;
   }
 
   public isOpen(): boolean {
@@ -26,20 +31,29 @@ export class SelectorWindowService {
     return this.currentSnippets;
   }
 
-  public open(targetHwnd: WindowHandle, snippets: Snippet[]): void {
+  public getData(): SelectorPayload {
+    return {
+      snippets: this.currentSnippets,
+      contextBlocks: this.currentContextBlocks
+    };
+  }
+
+  public open(targetHwnd: WindowHandle, snippets: Snippet[], contextBlocks: ContextBlock[] = []): void {
     this.targetHwnd = targetHwnd;
     this.currentSnippets = snippets;
+    this.currentContextBlocks = contextBlocks;
 
     if (this.window && !this.window.isDestroyed()) {
       this.window.destroy();
     }
 
-    const popupWidth = 420;
-    // Calculate approximate height: header + item height * count + padding
+    const popupWidth = 440;
+    // Calculate approximate height: header + memory bar + item height * count + padding
     const hasDescriptions = snippets.some((s) => Boolean(s.description));
     const itemHeight = hasDescriptions ? 54 : 44;
-    const headerHeight = 48;
-    const popupHeight = Math.min(headerHeight + snippets.length * itemHeight + 20, 580);
+    const headerHeight = 44;
+    const memoryBarHeight = contextBlocks.length > 0 ? 36 : 0;
+    const popupHeight = Math.min(headerHeight + memoryBarHeight + snippets.length * itemHeight + 24, 600);
 
     const cursor = screen.getCursorScreenPoint();
     const display = screen.getDisplayNearestPoint(cursor);
@@ -105,9 +119,32 @@ export class SelectorWindowService {
     });
 
     this.window.on('blur', () => {
-      // Close popup if user clicks elsewhere
-      this.cancel();
+      // Close popup if user clicks elsewhere, but not during an active context block paste
+      if (!this.isPastingContext) {
+        this.cancel();
+      }
     });
+  }
+
+  public async pasteContextBlock(blockId: string): Promise<boolean> {
+    if (!this.isOpen() || !this.onPasteContextCallback) {
+      return false;
+    }
+
+    this.isPastingContext = true;
+    try {
+      const success = await this.onPasteContextCallback(blockId, this.targetHwnd);
+      return success;
+    } finally {
+      // Restore focus back to the selector window so user can immediately press [1..9] or another key
+      if (this.window && !this.window.isDestroyed()) {
+        this.window.show();
+        this.window.focus();
+      }
+      setTimeout(() => {
+        this.isPastingContext = false;
+      }, 150);
+    }
   }
 
   public selectSlot(slotNumber: number): void {

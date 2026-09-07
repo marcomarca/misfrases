@@ -1,8 +1,10 @@
 import { ipcMain } from 'electron';
 import { IPC_CHANNELS } from '../../shared/constants';
 import {
+  CreateContextBlockSchema,
   CreateSnippetSchema,
   ReorderSnippetsSchema,
+  UpdateContextBlockSchema,
   UpdateSettingsSchema,
   UpdateSnippetSchema,
   ValidateHotkeySchema
@@ -11,6 +13,7 @@ import type { SnippetService } from '../snippets/SnippetService';
 import type { HotkeyService } from '../hotkeys/HotkeyService';
 import type { StatisticsService } from '../statistics/StatisticsService';
 import type { SettingsRepository } from '../database/repositories/SettingsRepository';
+import type { ContextBlockRepository } from '../database/repositories/ContextBlockRepository';
 import type { ExpansionService } from '../expansion/ExpansionService';
 import type { SelectorWindowService } from '../popup/SelectorWindowService';
 import type { TrayService } from '../tray/TrayService';
@@ -23,6 +26,7 @@ import type { BrowserWindow } from 'electron';
 export interface IpcServices {
   snippetService: SnippetService;
   hotkeyService: HotkeyService;
+  contextBlockRepo: ContextBlockRepository;
   statsService: StatisticsService;
   settingsRepo: SettingsRepository;
   expansionService: ExpansionService;
@@ -85,6 +89,30 @@ export function registerIpcHandlers(services: IpcServices): void {
     return { success: true };
   });
 
+  // Context Blocks
+  ipcMain.handle(IPC_CHANNELS.CONTEXT_BLOCKS_LIST, async () => {
+    return services.contextBlockRepo.listAll();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.CONTEXT_BLOCKS_GET, async (_, id: string) => {
+    return services.contextBlockRepo.getById(id);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.CONTEXT_BLOCKS_CREATE, async (_, rawInput: unknown) => {
+    const validated = CreateContextBlockSchema.parse(rawInput);
+    return services.contextBlockRepo.create(validated);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.CONTEXT_BLOCKS_UPDATE, async (_, rawInput: unknown) => {
+    const validated = UpdateContextBlockSchema.parse(rawInput);
+    return services.contextBlockRepo.update(validated);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.CONTEXT_BLOCKS_REMOVE, async (_, id: string) => {
+    services.contextBlockRepo.remove(id);
+    return { success: true };
+  });
+
   // Stats
   ipcMain.handle(IPC_CHANNELS.STATS_SUMMARY, async () => {
     return services.statsService.getSummary();
@@ -144,12 +172,17 @@ export function registerIpcHandlers(services: IpcServices): void {
 
   // Selector
   ipcMain.handle(IPC_CHANNELS.SELECTOR_GET_DATA, async () => {
-    return services.selectorService.getCurrentSnippets();
+    return services.selectorService.getData();
   });
 
   ipcMain.handle(IPC_CHANNELS.SELECTOR_SELECT, async (_, slot: number) => {
     services.selectorService.selectSlot(slot);
     return { success: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SELECTOR_PASTE_CONTEXT, async (_, blockId: string) => {
+    const success = await services.selectorService.pasteContextBlock(blockId);
+    return { success };
   });
 
   ipcMain.handle(IPC_CHANNELS.SELECTOR_CANCEL, async () => {

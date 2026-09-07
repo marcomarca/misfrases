@@ -6,6 +6,7 @@ import { HotkeyRepository } from '../database/repositories/HotkeyRepository';
 import { SnippetRepository } from '../database/repositories/SnippetRepository';
 import { UsageRepository } from '../database/repositories/UsageRepository';
 import { SettingsRepository } from '../database/repositories/SettingsRepository';
+import { ContextBlockRepository } from '../database/repositories/ContextBlockRepository';
 import { HotkeyService } from '../hotkeys/HotkeyService';
 import { WindowsInputService } from '../windows/WindowsInputService';
 import { ClipboardGuard } from '../windows/ClipboardGuard';
@@ -29,6 +30,7 @@ export class AppLifecycleService {
   private snippetRepo!: SnippetRepository;
   private usageRepo!: UsageRepository;
   private settingsRepo!: SettingsRepository;
+  private contextBlockRepo!: ContextBlockRepository;
 
   private hotkeyService!: HotkeyService;
   private windowsInput!: WindowsInputService;
@@ -66,6 +68,7 @@ export class AppLifecycleService {
     this.snippetRepo = new SnippetRepository(this.db.getRawDb());
     this.usageRepo = new UsageRepository(this.db.getRawDb());
     this.settingsRepo = new SettingsRepository(this.db.getRawDb());
+    this.contextBlockRepo = new ContextBlockRepository(this.db.getRawDb());
 
     const settings = this.settingsRepo.getSettings();
 
@@ -98,7 +101,8 @@ export class AppLifecycleService {
       this.clipboardGuard,
       this.statsService,
       this.snippetRepo,
-      this.selectorService
+      this.selectorService,
+      this.contextBlockRepo
     );
 
     this.snippetService = new SnippetService(
@@ -110,7 +114,8 @@ export class AppLifecycleService {
     this.backupService = new BackupService(
       this.snippetRepo,
       this.hotkeyRepo,
-      this.hotkeyService
+      this.hotkeyService,
+      this.contextBlockRepo
     );
 
     this.trayService = new TrayService();
@@ -131,6 +136,7 @@ export class AppLifecycleService {
     registerIpcHandlers({
       snippetService: this.snippetService,
       hotkeyService: this.hotkeyService,
+      contextBlockRepo: this.contextBlockRepo,
       statsService: this.statsService,
       settingsRepo: this.settingsRepo,
       expansionService: this.expansionService,

@@ -12,42 +12,35 @@ export class ClipboardGuard implements IClipboardGuard {
   private lastSetText: string | null = null;
 
   public canSnapshotSafely(): boolean {
-    try {
-      const formats = clipboard.availableFormats();
-      // If clipboard is empty, it's safe
-      if (formats.length === 0) {
-        return true;
-      }
-
-      // Safe formats: pure text/plain or basic html
-      const safeFormats = new Set(['text/plain', 'text/html', 'UTF8_STRING', 'TEXT']);
-      return formats.every((fmt) => safeFormats.has(fmt));
-    } catch {
-      return false;
-    }
+    return true;
   }
 
   public snapshot(): ClipboardSnapshot {
     try {
       const formats = clipboard.availableFormats();
-      const hasText = formats.includes('text/plain') || formats.includes('TEXT') || formats.includes('UTF8_STRING');
+      const hasText = formats.some(
+        (f) => f.includes('text') || f === 'TEXT' || f === 'UTF8_STRING' || f === 'CF_UNICODETEXT'
+      );
       const hasHtml = formats.includes('text/html');
-      const hasImage = formats.includes('image/png') || formats.includes('image/jpeg');
+      const hasImage = formats.some((f) => f.includes('image') || f === 'image/png' || f === 'image/jpeg');
 
-      const text = hasText ? clipboard.readText() : undefined;
+      const text = clipboard.readText();
       const html = hasHtml ? clipboard.readHTML() : undefined;
+      const image = hasImage ? clipboard.readImage() : undefined;
 
       return {
-        hasText,
-        text,
+        hasText: Boolean(text),
+        text: text || '',
         hasHtml,
         html,
         hasImage,
+        image,
         formats
       };
     } catch {
       return {
         hasText: false,
+        text: '',
         hasHtml: false,
         hasImage: false,
         formats: []
@@ -71,13 +64,23 @@ export class ClipboardGuard implements IClipboardGuard {
         return;
       }
 
-      clipboard.clear();
+      if (snapshot.hasImage && snapshot.image && !snapshot.image.isEmpty()) {
+        clipboard.writeImage(snapshot.image);
+        return;
+      }
 
-      if (snapshot.text || snapshot.html) {
+      if (snapshot.hasHtml && snapshot.html && snapshot.text) {
         clipboard.write({
-          text: snapshot.text || '',
+          text: snapshot.text,
           html: snapshot.html
         });
+        return;
+      }
+
+      if (snapshot.text) {
+        clipboard.writeText(snapshot.text);
+      } else {
+        clipboard.clear();
       }
     } catch (err) {
       console.error('Failed to restore clipboard snapshot:', err);

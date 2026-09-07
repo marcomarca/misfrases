@@ -1,4 +1,4 @@
-import type { AppState, Snippet, WindowHandle } from '../../shared/types';
+import type { AppState, ContextBlock, Snippet, WindowHandle } from '../../shared/types';
 import type { IWindowsInputService } from '../windows/WindowsInputService';
 import type { IClipboardGuard } from '../windows/ClipboardGuard';
 import type { StatisticsService } from '../statistics/StatisticsService';
@@ -17,7 +17,12 @@ export class ExpansionService {
     private clipboardGuard: IClipboardGuard,
     private statsService: StatisticsService,
     private snippetRepo: SnippetRepository,
-    private selectorService: SelectorWindowService
+    private selectorService: SelectorWindowService,
+    private contextBlockRepo?: {
+      getAllAsMap(): Record<string, string>;
+      listAll?(): ContextBlock[];
+      getById?(id: string): ContextBlock | null;
+    }
   ) {
     this.selectorService.setCallbacks(
       (snippet, targetHwnd) => {
@@ -25,6 +30,15 @@ export class ExpansionService {
       },
       () => {
         this.setState('READY');
+      },
+      async (blockId, targetHwnd) => {
+        if (!this.contextBlockRepo || !this.contextBlockRepo.getById) {
+          return false;
+        }
+        const block = this.contextBlockRepo.getById(blockId);
+        if (!block) return false;
+        const textToPaste = block.content.endsWith('\n') ? block.content : `${block.content}\n`;
+        return this.expandDirectText(targetHwnd, textToPaste);
       }
     );
   }
@@ -56,12 +70,13 @@ export class ExpansionService {
 
     // 2-10 snippets -> open selector popup
     this.setState('SELECTOR_OPEN');
-    this.selectorService.open(targetHwnd, snippets);
+    const contextBlocks = this.contextBlockRepo && this.contextBlockRepo.listAll
+      ? this.contextBlockRepo.listAll()
+      : [];
+    this.selectorService.open(targetHwnd, snippets, contextBlocks);
   }
 
-  public async expand(targetHwnd: WindowHandle, snippet: Snippet): Promise<boolean> {
-    this.setState('EXPANDING');
-
+  public async expandDirectText(targetHwnd: WindowHandle, text: string): Promise<boolean> {
     try {
       if (targetHwnd && this.windowsInput.isWindow(targetHwnd)) {
         const restored = await this.windowsInput.restoreForegroundWindow(targetHwnd);
@@ -74,60 +89,55 @@ export class ExpansionService {
 
       await this.windowsInput.waitForModifiersReleased(1000);
 
-      let dispatched = false;
-      let clipboardTextForTemplate = '';
-      let snapshot: any = null;
-      const canUseClipboard = this.clipboardGuard.canSnapshotSafely();
+      // 1. Snapshot previous clipboard state
+      const snapshot = this.clipboardGuard.snapshot();
 
-      if (canUseClipboard) {
-        snapshot = this.clipboardGuard.snapshot();
+      // 2. Set text in clipboard
+      this.clipboardGuard.setTemporaryText(text);
+
+      // 3. Synchronization pause so the OS clipboard buffer commits before Ctrl+V
+      await new Promise((resolve) => setTimeout(resolve, 35));
+
+      // 4. Send paste (Ctrl+V) via Win32 SendInput (with keybd_event fallback)
+      const dispatched = this.windowsInput.sendPaste();
+
+      if (dispatched) {
+        // Allow target application to process and read the paste message before restoring clipboard
+        await new Promise((resolve) => setTimeout(resolve, 85));
+      } else {
+        this.logger.warn('expansion', 'SendInput Ctrl+V paste failed');
+      }
+
+      // 5. Always restore original clipboard snapshot immediately to avoid leaving residual text
+      this.clipboardGuard.restore(snapshot);
+
+      return dispatched;
+    } catch (err: any) {
+      this.logger.error('expansion failure', 'Unexpected error during text expansion', err);
+      return false;
+    } finally {
+      this.windowsInput.forceReleaseModifiers();
+    }
+  }
+
+  public async expand(targetHwnd: WindowHandle, snippet: Snippet): Promise<boolean> {
+    this.setState('EXPANDING');
+
+    try {
+      let clipboardTextForTemplate = '';
+      if (this.clipboardGuard.canSnapshotSafely()) {
+        const snapshot = this.clipboardGuard.snapshot();
         clipboardTextForTemplate = snapshot.text || '';
       }
 
-      // Render dynamic variables ({{date}}, {{time}}, {{clipboard}}, etc.)
+      // Render dynamic variables ({{date}}, {{time}}, {{clipboard}}, context blocks, etc.)
+      const contextBlocks = this.contextBlockRepo ? this.contextBlockRepo.getAllAsMap() : {};
       const contentToInsert = TemplateEngine.render(snippet.content, {
-        clipboardText: clipboardTextForTemplate
+        clipboardText: clipboardTextForTemplate,
+        contextBlocks
       });
 
-      // Strategy selection: Safe clipboard paste vs Direct Unicode input
-      if (canUseClipboard && snapshot) {
-        this.clipboardGuard.setTemporaryText(contentToInsert);
-
-        // Brief synchronization pause so the OS clipboard buffer commits before Ctrl+V
-        await new Promise((resolve) => setTimeout(resolve, 30));
-
-        dispatched = this.windowsInput.sendPaste();
-
-        if (dispatched) {
-          // Allow target application to process and read the paste message before restoring clipboard
-          await new Promise((resolve) => setTimeout(resolve, 80));
-        } else {
-          this.logger.warn('expansion', 'SendInput Ctrl+V paste failed, attempting Unicode fallback', {
-            snippetId: snippet.id
-          });
-        }
-
-        // Always restore original clipboard snapshot immediately to avoid leaving residual snippet text
-        this.clipboardGuard.restore(snapshot);
-
-        // If paste failed, fallback to direct Unicode input so the user still receives their snippet
-        if (!dispatched) {
-          dispatched = this.windowsInput.sendUnicode(contentToInsert);
-          if (!dispatched) {
-            this.logger.error('expansion failure', 'Unicode fallback also failed after paste failure', undefined, {
-              snippetId: snippet.id
-            });
-          }
-        }
-      } else {
-        // Unsafe format (e.g. image or complex binary): leave clipboard intact and use Unicode SendInput
-        dispatched = this.windowsInput.sendUnicode(contentToInsert);
-        if (!dispatched) {
-          this.logger.error('expansion failure', 'SendInput Unicode fallback failed', undefined, {
-            snippetId: snippet.id
-          });
-        }
-      }
+      const dispatched = await this.expandDirectText(targetHwnd, contentToInsert);
 
       if (dispatched) {
         this.statsService.recordUsage(snippet.id);
@@ -144,7 +154,6 @@ export class ExpansionService {
       });
       return false;
     } finally {
-      this.windowsInput.forceReleaseModifiers();
       this.setState('READY');
     }
   }

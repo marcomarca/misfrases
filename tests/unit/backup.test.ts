@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { AppDatabase } from '../../src/main/database/Database';
 import { HotkeyRepository } from '../../src/main/database/repositories/HotkeyRepository';
 import { SnippetRepository } from '../../src/main/database/repositories/SnippetRepository';
+import { ContextBlockRepository } from '../../src/main/database/repositories/ContextBlockRepository';
 import { BackupService, type IHotkeyRebuilder } from '../../src/main/backup/BackupService';
 
 class MockHotkeyRebuilder implements IHotkeyRebuilder {
@@ -15,6 +16,7 @@ describe('BackupService', () => {
   let db: AppDatabase;
   let hotkeyRepo: HotkeyRepository;
   let snippetRepo: SnippetRepository;
+  let contextBlockRepo: ContextBlockRepository;
   let mockRebuilder: MockHotkeyRebuilder;
   let backupService: BackupService;
 
@@ -22,8 +24,9 @@ describe('BackupService', () => {
     db = new AppDatabase(':memory:');
     hotkeyRepo = new HotkeyRepository(db.getRawDb());
     snippetRepo = new SnippetRepository(db.getRawDb());
+    contextBlockRepo = new ContextBlockRepository(db.getRawDb());
     mockRebuilder = new MockHotkeyRebuilder();
-    backupService = new BackupService(snippetRepo, hotkeyRepo, mockRebuilder);
+    backupService = new BackupService(snippetRepo, hotkeyRepo, mockRebuilder, contextBlockRepo);
   });
 
   test('exports empty backup when database has no snippets', () => {
@@ -121,4 +124,27 @@ describe('BackupService', () => {
     expect(res.success).toBe(false);
     expect(res.error).toBeDefined();
   });
+
+  test('exports and imports context blocks in backup', () => {
+    const backup = backupService.exportData();
+    expect(backup.contextBlocks).toBeDefined();
+    expect(backup.contextBlocks?.length).toBe(4);
+
+    const db2 = new AppDatabase(':memory:');
+    const hotkeyRepo2 = new HotkeyRepository(db2.getRawDb());
+    const snippetRepo2 = new SnippetRepository(db2.getRawDb());
+    const contextBlockRepo2 = new ContextBlockRepository(db2.getRawDb());
+    const rebuilder2 = new MockHotkeyRebuilder();
+    const backupService2 = new BackupService(snippetRepo2, hotkeyRepo2, rebuilder2, contextBlockRepo2);
+
+    // Modify a block in backup
+    backup.contextBlocks![0].title = 'Perfil Base Importado';
+    const importRes = backupService2.importData(backup, 'merge');
+    expect(importRes.success).toBe(true);
+    expect(importRes.contextBlockCount).toBe(4);
+
+    const importedBlock = contextBlockRepo2.getByKey(backup.contextBlocks![0].key);
+    expect(importedBlock?.title).toBe('Perfil Base Importado');
+  });
 });
+

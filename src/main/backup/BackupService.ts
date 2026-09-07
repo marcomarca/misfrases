@@ -22,7 +22,11 @@ export class BackupService {
   constructor(
     private snippetRepo: SnippetRepository,
     private hotkeyRepo: HotkeyRepository,
-    private hotkeyService: IHotkeyRebuilder
+    private hotkeyService: IHotkeyRebuilder,
+    private contextBlockRepo?: {
+      listAll(): any[];
+      bulkUpsert(blocks: any[]): void;
+    }
   ) {}
 
   public exportData(): BackupData {
@@ -39,10 +43,22 @@ export class BackupService {
       updatedAt: s.updatedAt
     }));
 
+    const contextBlocks = this.contextBlockRepo
+      ? this.contextBlockRepo.listAll().map((b) => ({
+          id: b.id,
+          key: b.key,
+          title: b.title,
+          content: b.content,
+          createdAt: b.createdAt,
+          updatedAt: b.updatedAt
+        }))
+      : [];
+
     return {
       version: '1.0',
       exportedAt: Date.now(),
-      snippets: backupSnippets
+      snippets: backupSnippets,
+      contextBlocks
     };
   }
 
@@ -59,6 +75,7 @@ export class BackupService {
 
     const backup = parseResult.data;
     let importedCount = 0;
+    let contextBlockCount = 0;
 
     try {
       if (mode === 'replace') {
@@ -90,12 +107,21 @@ export class BackupService {
         importedCount++;
       }
 
+      if (backup.contextBlocks && backup.contextBlocks.length > 0 && this.contextBlockRepo) {
+        this.contextBlockRepo.bulkUpsert(backup.contextBlocks);
+        contextBlockCount = backup.contextBlocks.length;
+      }
+
       this.hotkeyService.rebuildAll();
-      this.logger.info('backup import', `Importación exitosa: ${importedCount} frases importadas (modo: ${mode})`);
+      this.logger.info(
+        'backup import',
+        `Importación exitosa: ${importedCount} frases y ${contextBlockCount} bloques importados (modo: ${mode})`
+      );
 
       return {
         success: true,
-        importedCount
+        importedCount,
+        contextBlockCount
       };
     } catch (err: any) {
       this.logger.error('backup import error', err.message || String(err));

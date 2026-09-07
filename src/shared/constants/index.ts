@@ -16,6 +16,13 @@ export const IPC_CHANNELS = {
   HOTKEYS_STOP_RECORDING: 'hotkeys:stop-recording',
   HOTKEYS_LIST_GROUPS: 'hotkeys:list-groups',
 
+  // Context Blocks
+  CONTEXT_BLOCKS_LIST: 'context-blocks:list',
+  CONTEXT_BLOCKS_GET: 'context-blocks:get',
+  CONTEXT_BLOCKS_CREATE: 'context-blocks:create',
+  CONTEXT_BLOCKS_UPDATE: 'context-blocks:update',
+  CONTEXT_BLOCKS_REMOVE: 'context-blocks:remove',
+
   // Stats
   STATS_SUMMARY: 'stats:summary',
   STATS_BY_SNIPPET: 'stats:by-snippet',
@@ -34,6 +41,7 @@ export const IPC_CHANNELS = {
   SELECTOR_SELECT: 'selector:select',
   SELECTOR_CANCEL: 'selector:cancel',
   SELECTOR_GET_DATA: 'selector:get-data',
+  SELECTOR_PASTE_CONTEXT: 'selector:paste-context',
 
   // Auto-Update
   AUTOUPDATE_CHECK: 'autoupdate:check',

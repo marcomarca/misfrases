@@ -50,6 +50,21 @@ export const ValidateHotkeySchema = z.object({
   accelerator: z.string().trim().min(1),
 });
 
+export const CreateContextBlockSchema = z.object({
+  key: z.string().trim().min(1, 'La clave es obligatoria').max(50, 'Máximo 50 caracteres')
+    .regex(/^[a-zA-Z0-9_-]+$/, 'La clave solo puede contener letras, números, guiones y guiones bajos'),
+  title: z.string().trim().min(1, 'El título es obligatorio').max(100, 'Máximo 100 caracteres'),
+  content: z.string().min(1, 'El contenido es obligatorio')
+});
+
+export const UpdateContextBlockSchema = z.object({
+  id: z.string().min(1),
+  key: z.string().trim().min(1).max(50)
+    .regex(/^[a-zA-Z0-9_-]+$/, 'La clave solo puede contener letras, números, guiones y guiones bajos').optional(),
+  title: z.string().trim().min(1).max(100).optional(),
+  content: z.string().min(1).optional()
+});
+
 export const BackupSnippetSchema = z.object({
   id: z.string().min(1),
   title: z.string().trim().min(1).max(120),
@@ -62,10 +77,20 @@ export const BackupSnippetSchema = z.object({
   updatedAt: z.number().optional()
 });
 
+export const BackupContextBlockSchema = z.object({
+  id: z.string().min(1),
+  key: z.string().trim().min(1).max(50),
+  title: z.string().trim().min(1).max(100),
+  content: z.string().min(1),
+  createdAt: z.number().optional(),
+  updatedAt: z.number().optional()
+});
+
 export const BackupDataSchema = z.object({
   version: z.string().optional().default('1.0'),
   exportedAt: z.number().optional().default(() => Date.now()),
-  snippets: z.array(BackupSnippetSchema)
+  snippets: z.array(BackupSnippetSchema),
+  contextBlocks: z.array(BackupContextBlockSchema).optional().default([])
 });
 
 export const ImportBackupOptionsSchema = z.object({

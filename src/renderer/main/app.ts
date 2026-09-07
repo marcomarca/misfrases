@@ -1,5 +1,5 @@
 import type { AppApi } from '../../preload/preload';
-import type { AppSettings, Snippet, SnippetStats, StatsSummary } from '../../shared/types';
+import type { AppSettings, ContextBlock, Snippet, SnippetStats, StatsSummary } from '../../shared/types';
 
 declare global {
   interface Window {
@@ -9,6 +9,7 @@ declare global {
 
 class MainApp {
   private snippets: Snippet[] = [];
+  private contextBlocks: ContextBlock[] = [];
   private currentTab = 'snippets';
   private isRecordingHotkey = false;
 
@@ -19,6 +20,25 @@ class MainApp {
   private snippetsEmpty!: HTMLElement;
   private searchInput!: HTMLInputElement;
   private filterGroupSelect!: HTMLSelectElement;
+
+  // Context DOM elements
+  private contextBlocksContainer!: HTMLElement;
+  private contextEmpty!: HTMLElement;
+  private contextSearchInput!: HTMLInputElement;
+  private btnNewContextBlock!: HTMLButtonElement;
+
+  // Context Modal elements
+  private contextModal!: HTMLElement;
+  private contextModalTitle!: HTMLElement;
+  private contextForm!: HTMLFormElement;
+  private contextBlockId!: HTMLInputElement;
+  private contextBlockKey!: HTMLInputElement;
+  private contextBlockTitle!: HTMLInputElement;
+  private contextBlockContent!: HTMLTextAreaElement;
+  private contextCharCount!: HTMLElement;
+  private btnCloseContextModal!: HTMLButtonElement;
+  private btnCancelContextModal!: HTMLButtonElement;
+  private snippetContextChips!: HTMLElement;
 
   // Modal elements
   private modal!: HTMLElement;
@@ -110,6 +130,25 @@ class MainApp {
     this.updateStatusText = document.getElementById('update-status-text')!;
     this.statusIndicator = document.getElementById('status-indicator')!;
     this.statusText = document.getElementById('status-text')!;
+
+    // Context DOM elements
+    this.contextBlocksContainer = document.getElementById('context-blocks-container')!;
+    this.contextEmpty = document.getElementById('context-empty')!;
+    this.contextSearchInput = document.getElementById('context-search-input') as HTMLInputElement;
+    this.btnNewContextBlock = document.getElementById('btn-new-context-block') as HTMLButtonElement;
+
+    // Context Modal elements
+    this.contextModal = document.getElementById('modal-context-block')!;
+    this.contextModalTitle = document.getElementById('modal-context-title')!;
+    this.contextForm = document.getElementById('form-context-block') as HTMLFormElement;
+    this.contextBlockId = document.getElementById('context-block-id') as HTMLInputElement;
+    this.contextBlockKey = document.getElementById('context-block-key') as HTMLInputElement;
+    this.contextBlockTitle = document.getElementById('context-block-title') as HTMLInputElement;
+    this.contextBlockContent = document.getElementById('context-block-content') as HTMLTextAreaElement;
+    this.contextCharCount = document.getElementById('context-char-count')!;
+    this.btnCloseContextModal = document.getElementById('btn-close-context-modal') as HTMLButtonElement;
+    this.btnCancelContextModal = document.getElementById('btn-cancel-context-modal') as HTMLButtonElement;
+    this.snippetContextChips = document.getElementById('snippet-context-chips')!;
   }
 
   private initEventListeners(): void {
@@ -159,6 +198,26 @@ class MainApp {
     });
     this.snippetForm?.addEventListener('submit', (e) => this.handleSaveSnippet(e));
 
+    // Context Blocks events
+    this.btnNewContextBlock?.addEventListener('click', () => this.openContextModal());
+    this.btnCloseContextModal?.addEventListener('click', () => this.closeContextModal());
+    this.btnCancelContextModal?.addEventListener('click', () => this.closeContextModal());
+    this.contextModal?.addEventListener('click', (e) => {
+      if (e.target === this.contextModal) {
+        this.closeContextModal();
+      }
+    });
+    this.contextForm?.addEventListener('submit', (e) => this.handleSaveContextBlock(e));
+    this.contextSearchInput?.addEventListener('input', () => this.renderContextBlocks());
+    this.contextBlockContent?.addEventListener('input', () => this.updateContextCharCount());
+    this.contextBlockKey?.addEventListener('input', () => {
+      const preview = document.getElementById('context-key-preview');
+      if (preview) {
+        const val = this.contextBlockKey.value.trim().toLowerCase();
+        preview.textContent = `{{@${val || 'clave'}}}`;
+      }
+    });
+
     // Hotkey recorder
     this.btnRecordHotkey?.addEventListener('click', () => this.startRecordingHotkey());
     window.addEventListener('keydown', (e) => {
@@ -169,6 +228,11 @@ class MainApp {
           this.hotkeyFeedback.textContent = 'Grabación cancelada.';
           this.hotkeyFeedback.className = 'form-hint';
           window.appApi.hotkeys.stopRecording();
+          e.preventDefault();
+          return;
+        }
+        if (!this.contextModal.classList.contains('hidden')) {
+          this.closeContextModal();
           e.preventDefault();
           return;
         }
@@ -293,6 +357,7 @@ class MainApp {
         if (res.success) {
           this.showToast(`${res.importedCount} frases importadas correctamente`, 'success');
           await this.loadSnippets();
+          await this.loadContextBlocks();
         } else if (!res.canceled) {
           this.showToast(`Error al importar: ${res.error || 'Error desconocido'}`, 'error');
         }
@@ -353,6 +418,8 @@ class MainApp {
 
     if (tab === 'snippets') {
       this.loadSnippets();
+    } else if (tab === 'context') {
+      this.loadContextBlocks();
     } else if (tab === 'reorder') {
       this.loadReorderView();
     } else if (tab === 'stats') {
@@ -365,6 +432,7 @@ class MainApp {
   private async loadInitialData(): Promise<void> {
     await this.loadSettings();
     await this.loadSnippets();
+    await this.loadContextBlocks();
   }
 
   // SNIPPETS
@@ -604,6 +672,7 @@ class MainApp {
     this.formEnabled.checked = true;
     this.hotkeyFeedback.textContent = 'Pulsa "Grabar atajo" y luego presiona la combinación deseada.';
     this.hotkeyFeedback.className = 'form-hint';
+    this.renderSnippetContextChips();
     this.modal.classList.remove('hidden');
     this.formTitle.focus();
   }
@@ -627,6 +696,7 @@ class MainApp {
     this.formEnabled.checked = snippet.enabled;
     this.hotkeyFeedback.textContent = '';
     this.hotkeyFeedback.className = 'form-hint';
+    this.renderSnippetContextChips();
     this.modal.classList.remove('hidden');
   }
 
@@ -735,6 +805,232 @@ class MainApp {
       await this.loadSnippets();
     } catch (err: any) {
       this.showToast(`Error al guardar frase: ${err.message || err}`, 'error');
+    }
+  }
+
+  // CONTEXT BLOCKS
+  public async loadContextBlocks(): Promise<void> {
+    this.contextBlocks = await window.appApi.contextBlocks.list();
+    this.renderContextBlocks();
+    this.renderSnippetContextChips();
+  }
+
+  private renderContextBlocks(): void {
+    if (!this.contextBlocksContainer) return;
+
+    const query = (this.contextSearchInput?.value || '').toLowerCase().trim();
+    const filtered = this.contextBlocks.filter((b) => {
+      if (!query) return true;
+      return (
+        b.key.toLowerCase().includes(query) ||
+        b.title.toLowerCase().includes(query) ||
+        b.content.toLowerCase().includes(query)
+      );
+    });
+
+    this.contextBlocksContainer.innerHTML = '';
+
+    if (filtered.length === 0) {
+      this.contextEmpty?.classList.remove('hidden');
+      return;
+    }
+
+    this.contextEmpty?.classList.add('hidden');
+
+    for (const block of filtered) {
+      const card = document.createElement('div');
+      card.className = 'context-card';
+
+      card.innerHTML = `
+        <div class="context-card-header">
+          <div>
+            <span class="context-card-tag">@${this.escapeHtml(block.key)}</span>
+            <div class="context-card-title">${this.escapeHtml(block.title)}</div>
+          </div>
+          <div class="context-card-actions">
+            <button class="btn-icon-subtle" data-copy-tag="${this.escapeHtml(block.key)}" title="Copiar etiqueta {{@${this.escapeHtml(block.key)}}}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+              <span>Copiar @clave</span>
+            </button>
+            <button class="btn-icon-subtle" data-copy-content="${this.escapeHtml(block.id)}" title="Copiar contenido">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copiar texto</span>
+            </button>
+            <button class="btn-icon-subtle" data-edit-context="${this.escapeHtml(block.id)}" title="Editar bloque">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              <span>Editar</span>
+            </button>
+            <button class="btn-icon-subtle btn-delete" data-delete-context="${this.escapeHtml(block.id)}" title="Eliminar bloque">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+        <div class="context-card-body">${this.escapeHtml(block.content)}</div>
+        <div class="context-card-footer">
+          <span class="context-card-chars">${block.content.length.toLocaleString()} caracteres</span>
+          <span class="form-hint-inline" style="font-family: monospace;">Uso: <code>{{@${this.escapeHtml(block.key)}}}</code></span>
+        </div>
+      `;
+
+      this.contextBlocksContainer.appendChild(card);
+    }
+
+    // Attach listeners
+    this.contextBlocksContainer.querySelectorAll('[data-copy-tag]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const key = btn.getAttribute('data-copy-tag')!;
+        await navigator.clipboard.writeText(`{{@${key}}}`);
+        this.showToast(`Etiqueta {{@${key}}} copiada al portapapeles`, 'success');
+      });
+    });
+
+    this.contextBlocksContainer.querySelectorAll('[data-copy-content]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-copy-content')!;
+        const block = this.contextBlocks.find((b) => b.id === id);
+        if (block) {
+          await navigator.clipboard.writeText(block.content);
+          this.showToast(`Contenido de "${block.title}" copiado al portapapeles`, 'success');
+        }
+      });
+    });
+
+    this.contextBlocksContainer.querySelectorAll('[data-edit-context]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-edit-context')!;
+        const block = this.contextBlocks.find((b) => b.id === id);
+        if (block) {
+          this.openContextModal(block);
+        }
+      });
+    });
+
+    this.contextBlocksContainer.querySelectorAll('[data-delete-context]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-delete-context')!;
+        const block = this.contextBlocks.find((b) => b.id === id);
+        if (!block) return;
+
+        if (confirm(`¿Deseas eliminar el bloque de contexto "@${block.key}" (${block.title})?`)) {
+          await window.appApi.contextBlocks.remove(id);
+          this.showToast(`Bloque "@${block.key}" eliminado`, 'info');
+          await this.loadContextBlocks();
+        }
+      });
+    });
+  }
+
+  private renderSnippetContextChips(): void {
+    if (!this.snippetContextChips) return;
+    this.snippetContextChips.innerHTML = '';
+
+    if (this.contextBlocks.length === 0) {
+      const hint = document.createElement('span');
+      hint.className = 'form-hint-inline';
+      hint.textContent = 'No hay bloques de contexto aún. Créalos en Memoria IA.';
+      this.snippetContextChips.appendChild(hint);
+      return;
+    }
+
+    for (const block of this.contextBlocks) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'context-chip-btn';
+      chip.title = `${block.title}: ${block.content.slice(0, 100)}...`;
+      chip.innerHTML = `<span>@</span>${this.escapeHtml(block.key)}`;
+      chip.addEventListener('click', () => {
+        const tag = `{{@${block.key}}}`;
+        if (this.formContent) {
+          const start = this.formContent.selectionStart;
+          const end = this.formContent.selectionEnd;
+          const text = this.formContent.value;
+          this.formContent.value = text.substring(0, start) + tag + text.substring(end);
+          this.formContent.focus();
+          this.formContent.selectionStart = this.formContent.selectionEnd = start + tag.length;
+        }
+      });
+      this.snippetContextChips.appendChild(chip);
+    }
+  }
+
+  private openContextModal(block?: ContextBlock): void {
+    if (block) {
+      this.contextModalTitle.textContent = 'Editar Bloque de Memoria IA';
+      this.contextBlockId.value = block.id;
+      this.contextBlockKey.value = block.key;
+      this.contextBlockTitle.value = block.title;
+      this.contextBlockContent.value = block.content;
+      const preview = document.getElementById('context-key-preview');
+      if (preview) preview.textContent = `{{@${block.key}}}`;
+    } else {
+      this.contextModalTitle.textContent = 'Nuevo Bloque de Memoria IA';
+      this.contextBlockId.value = '';
+      this.contextBlockKey.value = '';
+      this.contextBlockTitle.value = '';
+      this.contextBlockContent.value = '';
+      const preview = document.getElementById('context-key-preview');
+      if (preview) preview.textContent = '{{@clave}}';
+    }
+
+    this.updateContextCharCount();
+    this.contextModal.classList.remove('hidden');
+    if (!block) {
+      this.contextBlockKey.focus();
+    } else {
+      this.contextBlockTitle.focus();
+    }
+  }
+
+  private closeContextModal(): void {
+    this.contextModal.classList.add('hidden');
+  }
+
+  private updateContextCharCount(): void {
+    if (this.contextCharCount && this.contextBlockContent) {
+      const len = this.contextBlockContent.value.length;
+      this.contextCharCount.textContent = `${len.toLocaleString()} caracteres`;
+    }
+  }
+
+  private async handleSaveContextBlock(e: Event): Promise<void> {
+    e.preventDefault();
+
+    const id = this.contextBlockId.value.trim();
+    const key = this.contextBlockKey.value.trim().toLowerCase();
+    const title = this.contextBlockTitle.value.trim();
+    const content = this.contextBlockContent.value;
+
+    if (!key || !/^[a-zA-Z0-9_-]+$/.test(key)) {
+      this.showToast('La clave solo puede contener letras, números, guiones y guiones bajos', 'error');
+      this.contextBlockKey.focus();
+      return;
+    }
+
+    if (!title) {
+      this.showToast('El título es requerido', 'error');
+      this.contextBlockTitle.focus();
+      return;
+    }
+
+    if (!content) {
+      this.showToast('El contenido no puede estar vacío', 'error');
+      this.contextBlockContent.focus();
+      return;
+    }
+
+    try {
+      if (id) {
+        await window.appApi.contextBlocks.update({ id, key, title, content });
+        this.showToast(`Bloque "@${key}" actualizado correctamente`, 'success');
+      } else {
+        await window.appApi.contextBlocks.create({ key, title, content });
+        this.showToast(`Bloque "@${key}" creado correctamente`, 'success');
+      }
+
+      this.closeContextModal();
+      await this.loadContextBlocks();
+    } catch (err: any) {
+      this.showToast(err.message || 'Error al guardar el bloque', 'error');
     }
   }
 

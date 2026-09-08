@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 console.log('Compiling TypeScript...');
-execSync('tsc', { stdio: 'inherit' });
+execSync('bun x tsc', { stdio: 'inherit' });
 
 console.log('Bundling preload script for Electron sandbox...');
 const preloadEntry = path.join(__dirname, '../src/preload/preload.ts');

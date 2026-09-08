@@ -159,11 +159,10 @@ export class SelectorWindowService {
   }
 
   public cancel(): void {
-    if (this.isOpen()) {
-      this.close();
-      if (this.onCancelCallback) {
-        this.onCancelCallback();
-      }
+    const wasOpen = this.isOpen();
+    this.close();
+    if (wasOpen && this.onCancelCallback) {
+      this.onCancelCallback();
     }
   }
 
@@ -171,7 +170,10 @@ export class SelectorWindowService {
     if (this.window && !this.window.isDestroyed()) {
       this.window.removeAllListeners('blur');
       this.window.destroy();
-      this.window = null;
     }
+    this.window = null;
+    this.currentSnippets = [];
+    this.currentContextBlocks = [];
+    this.targetHwnd = 0;
   }
 }

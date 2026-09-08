@@ -4,6 +4,14 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.4.1] - 2026-09-07
+
+### 🐛 Corregido (Fixed)
+- **Apertura Involuntaria del Menú Inicio:** Se eliminaron las teclas Windows (`VK_LWIN`, `VK_RWIN`) del conjunto de modificadores liberados sintéticamente en `forceReleaseModifiers()`, y se retiró dicha llamada del arranque (`bootstrap()`) y apagado (`shutdown()`) en `AppLifecycleService`. Además, ahora se consulta `GetAsyncKeyState` para despachar `KEYUP` únicamente sobre modificadores físicamente presionados.
+- **Inyección Accidental de Frases con Atajos Externos:** En la ventana flotante del selector (`selector.ts`), se añadieron guardas para descartar pulsaciones de teclado acompañadas de modificadores (`Ctrl`, `Alt`, `Meta`), se bloqueó el comportamiento predeterminado de `Space` y `Enter` que activaba botones enfocados, y se implementó un detector de pérdida de foco (`blur`) que cancela la selección de inmediato.
+- **Limpieza de Estado en Selector:** Limpieza estricta de `currentSnippets` y `targetHwnd` al cerrar el selector en `SelectorWindowService`.
+- **Compatibilidad de Compilación en Scripts:** Actualización en `scripts/build.ts` para ejecutar `bun x tsc` en lugar de invocar directamente `tsc`, asegurando compatibilidad en cualquier entorno de terminal.
+
 ---
 
 ## [1.4.0] - 2026-09-06

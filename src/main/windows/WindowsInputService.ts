@@ -117,12 +117,17 @@ export class WindowsInputService implements IWindowsInputService {
       return;
     }
 
-    const keysToRelease = [VK_V, VK_CONTROL, VK_MENU, VK_SHIFT, VK_LWIN, VK_RWIN];
+    // Only release modifiers used during paste injection; NEVER release VK_LWIN/VK_RWIN
+    // as standalone KEYUP on Win triggers the Windows Start Menu.
+    const keysToRelease = [VK_V, VK_CONTROL, VK_MENU, VK_SHIFT];
 
-    // Use keybd_event to immediately update OS virtual key state table
+    // Use keybd_event only for keys that are actually logically or physically pressed
     if (this.keybd_eventFunc) {
       for (const vk of keysToRelease) {
         try {
+          if (this.GetAsyncKeyStateFunc && (this.GetAsyncKeyStateFunc(vk) & 0x8000) === 0) {
+            continue;
+          }
           this.keybd_eventFunc(vk, 0, KEYEVENTF_KEYUP, 0);
         } catch {
           // Ignore key release error

@@ -138,6 +138,11 @@ class SelectorApp {
   }
 
   private initEventListeners(): void {
+    window.addEventListener('blur', () => {
+      // If window loses focus, close selector to avoid stuck popups
+      window.appApi.selector.cancel();
+    });
+
     window.addEventListener('keydown', async (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -145,8 +150,20 @@ class SelectorApp {
         return;
       }
 
+      // Prevent Space or Enter from triggering synthetic click events on focused elements
+      if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
+        e.preventDefault();
+        return;
+      }
+
+      // If modifier keys are held (Ctrl, Alt, Meta/Win), do NOT trigger any slot or memory key
+      if (e.ctrlKey || e.altKey || e.metaKey) {
+        return;
+      }
+
       // Check numbers 1..9
       if (e.key >= '1' && e.key <= '9') {
+        e.preventDefault();
         const slot = parseInt(e.key, 10);
         this.selectSlot(slot);
         return;
@@ -154,6 +171,7 @@ class SelectorApp {
 
       // Key 0 maps to slot 10
       if (e.key === '0') {
+        e.preventDefault();
         this.selectSlot(10);
         return;
       }

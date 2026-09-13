@@ -63,7 +63,8 @@ const appApi = {
       ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_UPDATE, input)
   },
   autoupdate: {
-    check: (): Promise<UpdateCheckResult> => ipcRenderer.invoke(IPC_CHANNELS.AUTOUPDATE_CHECK)
+    check: (): Promise<UpdateCheckResult> => ipcRenderer.invoke(IPC_CHANNELS.AUTOUPDATE_CHECK),
+    getVersion: (): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.AUTOUPDATE_GET_VERSION)
   },
   backup: {
     export: (): Promise<ExportBackupResult> => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_EXPORT),

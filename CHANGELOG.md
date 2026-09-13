@@ -4,6 +4,14 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.4.3] - 2026-09-13
+
+### 🐛 Corregido (Fixed)
+- **Visualización Dinámica de Versión en Configuración:** Se eliminó el texto estático `v1.1.1` del HTML principal y se implementó la obtención y actualización dinámica de la versión instalada (`app.getVersion()`) tanto al abrir la vista de Configuración como al consultar actualizaciones automáticas.
+- **Canal IPC para Consulta de Versión:** Se añadió `AUTOUPDATE_GET_VERSION` en constantes IPC, handlers principales y puente `preload` para sincronizar con fidelidad la versión activa de la aplicación en la interfaz gráfica.
+
+---
+
 ## [1.4.2] - 2026-09-13
 
 ### ♻️ Refactorización y Simplificación (Refactored & Simplified)

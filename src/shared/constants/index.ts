@@ -44,6 +44,7 @@ export const IPC_CHANNELS = {
 
   // Auto-Update
   AUTOUPDATE_CHECK: 'autoupdate:check',
+  AUTOUPDATE_GET_VERSION: 'autoupdate:get-version',
 
   // Backup
   BACKUP_EXPORT: 'backup:export',

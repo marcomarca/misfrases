@@ -194,6 +194,10 @@ export function registerIpcHandlers(services: IpcServices): void {
     return AutoUpdateService.checkForUpdatesManual();
   });
 
+  ipcMain.handle(IPC_CHANNELS.AUTOUPDATE_GET_VERSION, async () => {
+    return app.getVersion();
+  });
+
   // Backup
   ipcMain.handle(IPC_CHANNELS.BACKUP_EXPORT, async () => {
     const win = services.getMainWindow ? services.getMainWindow() : null;

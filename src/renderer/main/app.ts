@@ -77,6 +77,7 @@ class MainApp {
   private btnExportBackup!: HTMLButtonElement;
   private btnImportBackup!: HTMLButtonElement;
   private btnCheckUpdates!: HTMLButtonElement;
+  private updateVersionLabel!: HTMLElement;
   private updateStatusText!: HTMLElement;
   private statusIndicator!: HTMLElement;
   private statusText!: HTMLElement;
@@ -127,6 +128,7 @@ class MainApp {
     this.btnExportBackup = document.getElementById('btn-export-backup') as HTMLButtonElement;
     this.btnImportBackup = document.getElementById('btn-import-backup') as HTMLButtonElement;
     this.btnCheckUpdates = document.getElementById('btn-check-updates') as HTMLButtonElement;
+    this.updateVersionLabel = document.getElementById('update-version-label')!;
     this.updateStatusText = document.getElementById('update-status-text')!;
     this.statusIndicator = document.getElementById('status-indicator')!;
     this.statusText = document.getElementById('status-text')!;
@@ -377,6 +379,9 @@ class MainApp {
 
       try {
         const res = await window.appApi.autoupdate.check();
+        if (res.currentVersion && this.updateVersionLabel) {
+          this.updateVersionLabel.textContent = `Versión instalada: v${res.currentVersion}`;
+        }
         if (res.status === 'up_to_date') {
           this.showToast('Ya tienes la versión más reciente instalada', 'success');
           if (this.updateStatusText) {
@@ -386,6 +391,11 @@ class MainApp {
           this.showToast('Descargando nueva versión en segundo plano...', 'info');
           if (this.updateStatusText) {
             this.updateStatusText.textContent = res.message || 'Descargando actualización...';
+          }
+        } else if (res.status === 'update_available') {
+          this.showToast(`Nueva versión ${res.latestVersion || ''} disponible`, 'info');
+          if (this.updateStatusText) {
+            this.updateStatusText.textContent = res.message || `Nueva versión ${res.latestVersion || ''} disponible para descargar.`;
           }
         } else if (res.status === 'dev_mode') {
           this.showToast(res.message || 'Modo desarrollo activo', 'info');
@@ -1274,6 +1284,16 @@ class MainApp {
     this.applyTheme(settings.theme || 'dark');
 
     this.updateStatusBadge(settings.hotkeysEnabled);
+
+    // Cargar versión instalada dinámicamente
+    try {
+      const version = await window.appApi.autoupdate.getVersion();
+      if (this.updateVersionLabel && version) {
+        this.updateVersionLabel.textContent = `Versión instalada: v${version}`;
+      }
+    } catch {
+      // ignore
+    }
   }
 
   private applyTheme(theme: 'dark' | 'light' | 'system'): void {

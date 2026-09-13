@@ -12,13 +12,6 @@ export class HotkeyRepository {
     return row || null;
   }
 
-  public findById(id: string): HotkeyGroup | null {
-    const row = this.db
-      .prepare('SELECT id, accelerator, created_at as createdAt, updated_at as updatedAt FROM hotkey_groups WHERE id = ?')
-      .get(id) as HotkeyGroup | undefined;
-    return row || null;
-  }
-
   public listAll(): HotkeyGroup[] {
     return this.db
       .prepare('SELECT id, accelerator, created_at as createdAt, updated_at as updatedAt FROM hotkey_groups ORDER BY accelerator ASC')

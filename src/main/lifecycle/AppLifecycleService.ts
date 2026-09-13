@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync, spawn } from 'node:child_process';
 import { BrowserWindow, app, shell } from 'electron';
 import { AppDatabase } from '../database/Database';
 import { HotkeyRepository } from '../database/repositories/HotkeyRepository';
@@ -10,16 +11,12 @@ import { ContextBlockRepository } from '../database/repositories/ContextBlockRep
 import { HotkeyService } from '../hotkeys/HotkeyService';
 import { WindowsInputService } from '../windows/WindowsInputService';
 import { ClipboardGuard } from '../windows/ClipboardGuard';
-import { StatisticsService } from '../statistics/StatisticsService';
 import { SelectorWindowService } from '../popup/SelectorWindowService';
 import { ExpansionService } from '../expansion/ExpansionService';
 import { SnippetService } from '../snippets/SnippetService';
 import { BackupService } from '../backup/BackupService';
 import { TrayService } from '../tray/TrayService';
-import { SingleInstanceService } from './SingleInstanceService';
-import { LoginItemService } from './LoginItemService';
 import { AutoUpdateService } from './AutoUpdateService';
-import { AdministratorService } from '../windows/AdministratorService';
 import { registerIpcHandlers } from '../ipc/handlers';
 import { LoggerService } from '../logging/LoggerService';
 
@@ -35,7 +32,6 @@ export class AppLifecycleService {
   private hotkeyService!: HotkeyService;
   private windowsInput!: WindowsInputService;
   private clipboardGuard!: ClipboardGuard;
-  private statsService!: StatisticsService;
   private selectorService!: SelectorWindowService;
   private expansionService!: ExpansionService;
   private snippetService!: SnippetService;
@@ -49,14 +45,17 @@ export class AppLifecycleService {
     this.logger.info('startup', 'Application starting');
 
     // 1. Single instance check
-    const hasLock = SingleInstanceService.acquireLock(() => {
-      this.logger.info('startup', 'Focusing existing instance on second launch attempt');
-      this.showMainWindow();
-    });
-
-    if (!hasLock) {
-      this.logger.info('startup', 'Another instance is running, exiting');
-      return;
+    if (process.env.NODE_ENV !== 'test') {
+      const gotSingleInstanceLock = app.requestSingleInstanceLock();
+      if (!gotSingleInstanceLock) {
+        this.logger.info('startup', 'Another instance is running, exiting');
+        app.quit();
+        return;
+      }
+      app.on('second-instance', () => {
+        this.logger.info('startup', 'Focusing existing instance on second launch attempt');
+        this.showMainWindow();
+      });
     }
 
     // 2. Wait for electron app ready
@@ -73,10 +72,10 @@ export class AppLifecycleService {
     const settings = this.settingsRepo.getSettings();
 
     // 4. Admin elevation check
-    if (settings.administratorMode && !AdministratorService.isElevated()) {
+    if (settings.administratorMode && !this.isElevated()) {
       if (app.isPackaged) {
         this.logger.info('startup', 'Relaunching with elevated administrator privileges');
-        AdministratorService.relaunchAsAdmin();
+        this.relaunchAsAdmin();
         return;
       } else {
         this.logger.info('startup', 'Running in development mode: elevation relaunch bypassed');
@@ -84,20 +83,18 @@ export class AppLifecycleService {
     }
 
     // 5. Apply login item settings
-    LoginItemService.apply(settings);
+    this.applyLoginItemSettings(settings);
 
     // 6. Initialize services
     this.hotkeyService = new HotkeyService(this.hotkeyRepo, this.snippetRepo);
     this.windowsInput = new WindowsInputService();
-
     this.clipboardGuard = new ClipboardGuard();
-    this.statsService = new StatisticsService(this.usageRepo);
     this.selectorService = new SelectorWindowService();
 
     this.expansionService = new ExpansionService(
       this.windowsInput,
       this.clipboardGuard,
-      this.statsService,
+      this.usageRepo,
       this.snippetRepo,
       this.selectorService,
       this.contextBlockRepo
@@ -135,12 +132,13 @@ export class AppLifecycleService {
       snippetService: this.snippetService,
       hotkeyService: this.hotkeyService,
       contextBlockRepo: this.contextBlockRepo,
-      statsService: this.statsService,
+      usageRepo: this.usageRepo,
       settingsRepo: this.settingsRepo,
       expansionService: this.expansionService,
       selectorService: this.selectorService,
       trayService: this.trayService,
       backupService: this.backupService,
+      applyLoginSettings: (loginSettings) => this.applyLoginItemSettings(loginSettings),
       getMainWindow: () => this.mainWindow,
       onQuit: () => this.quit()
     });
@@ -176,6 +174,53 @@ export class AppLifecycleService {
     app.on('will-quit', () => {
       this.shutdown();
     });
+  }
+
+  private applyLoginItemSettings(settings: { launchAtLogin: boolean; startHidden?: boolean }): void {
+    try {
+      if (!app.isPackaged) {
+        app.setLoginItemSettings({ openAtLogin: false });
+        return;
+      }
+
+      app.setLoginItemSettings({
+        openAtLogin: settings.launchAtLogin,
+        path: process.execPath,
+        args: ['--hidden']
+      });
+    } catch (err) {
+      console.warn('Could not apply login item settings:', err);
+    }
+  }
+
+  private isElevated(): boolean {
+    if (process.platform !== 'win32') return false;
+    try {
+      execSync('net session', { stdio: 'ignore' });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private relaunchAsAdmin(): void {
+    if (process.platform !== 'win32') return;
+
+    const execPath = process.execPath;
+    const cwd = process.cwd();
+    const args = process.argv.slice(1).map((a) => (a === '.' ? `"${cwd}"` : `"${a}"`));
+    const argList = args.length > 0 ? `-ArgumentList '${args.join(', ')}'` : '';
+    const psCommand = `Start-Process -FilePath "${execPath}" ${argList} -WorkingDirectory "${cwd}" -Verb RunAs`;
+
+    try {
+      spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
+        detached: true,
+        stdio: 'ignore'
+      }).unref();
+      app.exit(0);
+    } catch (err) {
+      console.error('Failed to relaunch as administrator:', err);
+    }
   }
 
   private createMainWindow(): void {

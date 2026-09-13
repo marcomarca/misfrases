@@ -2,7 +2,6 @@ import { clipboard } from 'electron';
 import type { ClipboardSnapshot } from '../../shared/types';
 
 export interface IClipboardGuard {
-  canSnapshotSafely(): boolean;
   snapshot(): ClipboardSnapshot;
   setTemporaryText(text: string): void;
   restore(snapshot: ClipboardSnapshot): void;
@@ -10,10 +9,6 @@ export interface IClipboardGuard {
 
 export class ClipboardGuard implements IClipboardGuard {
   private lastSetText: string | null = null;
-
-  public canSnapshotSafely(): boolean {
-    return true;
-  }
 
   public snapshot(): ClipboardSnapshot {
     try {

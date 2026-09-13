@@ -1,6 +1,6 @@
 {
   "name": "mis-frases",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Windows Snippet & Prompt Manager",
   "repository": {
     "type": "git",
@@ -13,7 +13,6 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "benchmark": "bun scripts/build.ts && tsx tests/benchmarks/run-all.ts",
-    "spike": "bun scripts/p0-spike.ts",
     "start": "electron .",
     "package": "bun scripts/clean-process.ts && bun scripts/build.ts && electron-forge package",
     "make": "bun scripts/clean-process.ts && bun scripts/build.ts && electron-forge make"

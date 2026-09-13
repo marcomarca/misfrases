@@ -3,7 +3,6 @@ import { AppDatabase } from '../../src/main/database/Database';
 import { HotkeyRepository } from '../../src/main/database/repositories/HotkeyRepository';
 import { SnippetRepository } from '../../src/main/database/repositories/SnippetRepository';
 import { UsageRepository } from '../../src/main/database/repositories/UsageRepository';
-import { StatisticsService } from '../../src/main/statistics/StatisticsService';
 import { ExpansionService } from '../../src/main/expansion/ExpansionService';
 import type { IWindowsInputService } from '../../src/main/windows/WindowsInputService';
 import type { IClipboardGuard } from '../../src/main/windows/ClipboardGuard';
@@ -15,8 +14,8 @@ class FakeWindowsInput implements IWindowsInputService {
   public foregroundHwnd: WindowHandle = 1001;
   public restoredHwnd: WindowHandle | null = null;
   public pasteCalled = false;
-  public unicodeSent: string[] = [];
   public forceReleaseModifiersCalled = false;
+  public pasteSuccess = true;
 
   public getForegroundWindow(): WindowHandle {
     return this.foregroundHwnd;
@@ -34,25 +33,16 @@ class FakeWindowsInput implements IWindowsInputService {
   public forceReleaseModifiers(): void {
     this.forceReleaseModifiersCalled = true;
   }
-  public pasteSuccess = true;
   public sendPaste(): boolean {
     this.pasteCalled = true;
     return this.pasteSuccess;
   }
-  public sendUnicode(text: string): boolean {
-    this.unicodeSent.push(text);
-    return true;
-  }
 }
 
 class FakeClipboardGuard implements IClipboardGuard {
-  public safe = true;
   public tempText: string | null = null;
   public restoredSnapshot: ClipboardSnapshot | null = null;
 
-  public canSnapshotSafely(): boolean {
-    return this.safe;
-  }
   public snapshot(): ClipboardSnapshot {
     return {
       hasText: true,
@@ -112,7 +102,6 @@ describe('ExpansionService', () => {
   let hotkeyRepo: HotkeyRepository;
   let snippetRepo: SnippetRepository;
   let usageRepo: UsageRepository;
-  let statsService: StatisticsService;
   let windowsInput: FakeWindowsInput;
   let clipboardGuard: FakeClipboardGuard;
   let selectorService: FakeSelectorService;
@@ -123,7 +112,6 @@ describe('ExpansionService', () => {
     hotkeyRepo = new HotkeyRepository(db.getRawDb());
     snippetRepo = new SnippetRepository(db.getRawDb());
     usageRepo = new UsageRepository(db.getRawDb());
-    statsService = new StatisticsService(usageRepo);
     windowsInput = new FakeWindowsInput();
     clipboardGuard = new FakeClipboardGuard();
     selectorService = new FakeSelectorService();
@@ -131,7 +119,7 @@ describe('ExpansionService', () => {
     expansionService = new ExpansionService(
       windowsInput,
       clipboardGuard,
-      statsService,
+      usageRepo,
       snippetRepo,
       selectorService as unknown as SelectorWindowService
     );
@@ -154,7 +142,7 @@ describe('ExpansionService', () => {
     expect(clipboardGuard.restoredSnapshot).not.toBeNull();
     expect(clipboardGuard.restoredSnapshot?.text).toBe('previous clipboard');
 
-    const stats = statsService.getSummary();
+    const stats = usageRepo.getSummary();
     expect(stats.totalExpansions).toBe(1);
   });
 
@@ -173,7 +161,7 @@ describe('ExpansionService', () => {
     expect(clipboardGuard.restoredSnapshot).not.toBeNull();
     expect(clipboardGuard.restoredSnapshot?.text).toBe('previous clipboard');
 
-    const stats = statsService.getSummary();
+    const stats = usageRepo.getSummary();
     expect(stats.totalExpansions).toBe(1);
   });
 
@@ -196,7 +184,7 @@ describe('ExpansionService', () => {
     expect(clipboardGuard.tempText).toBe('Text 2');
     expect(clipboardGuard.restoredSnapshot).not.toBeNull();
 
-    const stats = statsService.getSummary();
+    const stats = usageRepo.getSummary();
     expect(stats.totalExpansions).toBe(1);
     expect(expansionService.getState()).toBe('READY');
   });
@@ -209,8 +197,7 @@ describe('ExpansionService', () => {
     await expansionService.handleHotkeyTrigger('Control+Alt+P');
 
     expect(windowsInput.pasteCalled).toBe(false);
-    expect(windowsInput.unicodeSent.length).toBe(0);
-    expect(statsService.getSummary().totalExpansions).toBe(0);
+    expect(usageRepo.getSummary().totalExpansions).toBe(0);
   });
 
   test('restores clipboard and releases modifiers when sendPaste fails', async () => {
@@ -240,7 +227,7 @@ describe('ExpansionService', () => {
     expansionService = new ExpansionService(
       windowsInput as any,
       clipboardGuard as any,
-      statsService,
+      usageRepo,
       snippetRepo,
       selectorService as any,
       contextBlockRepo
@@ -264,4 +251,3 @@ describe('ExpansionService', () => {
     expect(windowsInput.pasteCalled).toBe(true);
   });
 });
-

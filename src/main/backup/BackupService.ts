@@ -12,17 +12,13 @@ import type {
 import { BackupDataSchema } from '../../shared/schemas';
 import { LoggerService } from '../logging/LoggerService';
 
-export interface IHotkeyRebuilder {
-  rebuildAll(): void;
-}
-
 export class BackupService {
   private logger = LoggerService.getInstance();
 
   constructor(
     private snippetRepo: SnippetRepository,
     private hotkeyRepo: HotkeyRepository,
-    private hotkeyService: IHotkeyRebuilder,
+    private hotkeyService: { rebuildAll(): void },
     private contextBlockRepo?: {
       listAll(): any[];
       bulkUpsert(blocks: any[]): void;

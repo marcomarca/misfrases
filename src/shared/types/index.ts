@@ -24,12 +24,6 @@ export interface Snippet {
   accelerator?: string;
 }
 
-export interface UsageEvent {
-  id: number;
-  snippetId: string;
-  usedAt: number;
-}
-
 export interface AppSettings {
   launchAtLogin: boolean;
   administratorMode: boolean;
@@ -50,7 +44,6 @@ export interface ClipboardSnapshot {
   hasImage: boolean;
   image?: any;
   formats: string[];
-  sequenceNumber?: number;
 }
 
 export interface StatsSummary {

@@ -7,7 +7,6 @@ export interface IWindowsInputService {
   waitForModifiersReleased(timeoutMs?: number): Promise<void>;
   forceReleaseModifiers(): void;
   sendPaste(): boolean;
-  sendUnicode(text: string): boolean;
   isWindow(hwnd: WindowHandle): boolean;
 }
 
@@ -207,71 +206,5 @@ export class WindowsInputService implements IWindowsInputService {
     this.forceReleaseModifiers();
 
     return success;
-  }
-
-  public sendUnicode(text: string): boolean {
-    if (!this.isAvailable || !text) {
-      return false;
-    }
-
-    this.forceReleaseModifiers();
-
-    // Normalize CRLF
-    const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-    interface KeyAction {
-      vk: number;
-      scan: number;
-      flags: number;
-    }
-
-    const actions: KeyAction[] = [];
-
-    for (let i = 0; i < normalized.length; i++) {
-      if (normalized[i] === '\n') {
-        actions.push({ vk: VK_RETURN, scan: 0, flags: 0 });
-        actions.push({ vk: VK_RETURN, scan: 0, flags: KEYEVENTF_KEYUP });
-      } else {
-        const charCode = normalized.charCodeAt(i);
-        actions.push({ vk: 0, scan: charCode, flags: KEYEVENTF_UNICODE });
-        actions.push({ vk: 0, scan: charCode, flags: KEYEVENTF_UNICODE | KEYEVENTF_KEYUP });
-      }
-    }
-
-    let allSent = true;
-
-    if (this.SendInputFunc) {
-      const CHUNK_SIZE = 50;
-      for (let i = 0; i < actions.length; i += CHUNK_SIZE) {
-        const chunk = actions.slice(i, i + CHUNK_SIZE);
-        const buffer = Buffer.alloc(chunk.length * INPUT_SIZE_X64);
-        for (let j = 0; j < chunk.length; j++) {
-          this.writeKeyboardInput(buffer, j * INPUT_SIZE_X64, chunk[j].vk, chunk[j].scan, chunk[j].flags);
-        }
-
-        const sent = this.SendInputFunc(chunk.length, buffer, INPUT_SIZE_X64);
-        if (sent !== chunk.length) {
-          allSent = false;
-          break;
-        }
-      }
-    } else {
-      allSent = false;
-    }
-
-    // If SendInput failed, attempt keybd_event for unicode events
-    if (!allSent && this.keybd_eventFunc) {
-      try {
-        for (const act of actions) {
-          this.keybd_eventFunc(act.vk, act.scan, act.flags, 0);
-        }
-        allSent = true;
-      } catch (err) {
-        console.error('keybd_event unicode fallback error:', err);
-      }
-    }
-
-    this.forceReleaseModifiers();
-    return allSent;
   }
 }

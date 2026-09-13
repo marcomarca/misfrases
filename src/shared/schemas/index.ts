@@ -92,7 +92,3 @@ export const BackupDataSchema = z.object({
   snippets: z.array(BackupSnippetSchema),
   contextBlocks: z.array(BackupContextBlockSchema).optional().default([])
 });
-
-export const ImportBackupOptionsSchema = z.object({
-  mode: z.enum(['merge', 'replace']).optional().default('merge')
-});

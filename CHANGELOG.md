@@ -4,6 +4,15 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.4.2] - 2026-09-13
+
+### ♻️ Refactorización y Simplificación (Refactored & Simplified)
+- **Eliminación de Complejidad Accidental y Wrappers:** Eliminación de wrappers redundantes sin valor añadido (`StatisticsService`, `SingleInstanceService`, `LoginItemService` y `AdministratorService`), integrando su lógica directamente y conectando `UsageRepository` de forma inmediata con `ExpansionService` e IPC handlers.
+- **Limpieza de Código Muerto en Win32 FFI:** Eliminación de 65 líneas no utilizadas de inyección de pulsaciones unicode por teclado (`sendUnicode()`), consolidando el pipeline de inyección instantánea por portapapeles (`sendPaste()`).
+- **Eliminación de Tipos, Esquemas y Métodos Fósiles:** Retiro de `canSnapshotSafely()`, `AVAILABLE_VARIABLES`, `HotkeyRepository.findById()`, `UsageEvent`, `sequenceNumber`, `HOTKEYS_LIST_GROUPS`, `ImportBackupOptionsSchema` y el script de prueba inicial `p0-spike.ts`.
+
+---
+
 ## [1.4.1] - 2026-09-07
 
 ### 🐛 Corregido (Fixed)

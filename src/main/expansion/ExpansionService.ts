@@ -1,7 +1,7 @@
 import type { AppState, ContextBlock, Snippet, WindowHandle } from '../../shared/types';
 import type { IWindowsInputService } from '../windows/WindowsInputService';
 import type { IClipboardGuard } from '../windows/ClipboardGuard';
-import type { StatisticsService } from '../statistics/StatisticsService';
+import type { UsageRepository } from '../database/repositories/UsageRepository';
 import type { SnippetRepository } from '../database/repositories/SnippetRepository';
 import type { SelectorWindowService } from '../popup/SelectorWindowService';
 import { LoggerService } from '../logging/LoggerService';
@@ -15,7 +15,7 @@ export class ExpansionService {
   constructor(
     private windowsInput: IWindowsInputService,
     private clipboardGuard: IClipboardGuard,
-    private statsService: StatisticsService,
+    private usageRepo: UsageRepository,
     private snippetRepo: SnippetRepository,
     private selectorService: SelectorWindowService,
     private contextBlockRepo?: {
@@ -124,11 +124,8 @@ export class ExpansionService {
     this.setState('EXPANDING');
 
     try {
-      let clipboardTextForTemplate = '';
-      if (this.clipboardGuard.canSnapshotSafely()) {
-        const snapshot = this.clipboardGuard.snapshot();
-        clipboardTextForTemplate = snapshot.text || '';
-      }
+      const snapshot = this.clipboardGuard.snapshot();
+      const clipboardTextForTemplate = snapshot.text || '';
 
       // Render dynamic variables ({{date}}, {{time}}, {{clipboard}}, context blocks, etc.)
       const contextBlocks = this.contextBlockRepo ? this.contextBlockRepo.getAllAsMap() : {};
@@ -140,7 +137,7 @@ export class ExpansionService {
       const dispatched = await this.expandDirectText(targetHwnd, contentToInsert);
 
       if (dispatched) {
-        this.statsService.recordUsage(snippet.id);
+        this.usageRepo.recordUsage(snippet.id);
       } else {
         this.logger.error('expansion failure', 'Text insertion could not be dispatched', undefined, {
           snippetId: snippet.id

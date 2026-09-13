@@ -14,7 +14,6 @@ export const IPC_CHANNELS = {
   HOTKEYS_VALIDATE: 'hotkeys:validate',
   HOTKEYS_START_RECORDING: 'hotkeys:start-recording',
   HOTKEYS_STOP_RECORDING: 'hotkeys:stop-recording',
-  HOTKEYS_LIST_GROUPS: 'hotkeys:list-groups',
 
   // Context Blocks
   CONTEXT_BLOCKS_LIST: 'context-blocks:list',

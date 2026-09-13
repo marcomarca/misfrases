@@ -2,7 +2,6 @@ import { AppDatabase } from '../../src/main/database/Database';
 import { HotkeyRepository } from '../../src/main/database/repositories/HotkeyRepository';
 import { SnippetRepository } from '../../src/main/database/repositories/SnippetRepository';
 import { UsageRepository } from '../../src/main/database/repositories/UsageRepository';
-import { StatisticsService } from '../../src/main/statistics/StatisticsService';
 import { ExpansionService } from '../../src/main/expansion/ExpansionService';
 import type { IWindowsInputService } from '../../src/main/windows/WindowsInputService';
 import type { IClipboardGuard } from '../../src/main/windows/ClipboardGuard';
@@ -28,15 +27,9 @@ class MockWindowsInput implements IWindowsInputService {
   public sendPaste(): boolean {
     return true;
   }
-  public sendUnicode(_text: string): boolean {
-    return true;
-  }
 }
 
 class MockClipboardGuard implements IClipboardGuard {
-  public canSnapshotSafely(): boolean {
-    return true;
-  }
   public snapshot(): ClipboardSnapshot {
     return {
       hasText: true,
@@ -69,7 +62,6 @@ export async function runExpansionBenchmark() {
   const hotkeyRepo = new HotkeyRepository(db.getRawDb());
   const snippetRepo = new SnippetRepository(db.getRawDb());
   const usageRepo = new UsageRepository(db.getRawDb());
-  const statsService = new StatisticsService(usageRepo);
 
   const mockInput = new MockWindowsInput();
   const mockClipboard = new MockClipboardGuard();
@@ -78,7 +70,7 @@ export async function runExpansionBenchmark() {
   const expansionService = new ExpansionService(
     mockInput,
     mockClipboard,
-    statsService,
+    usageRepo,
     snippetRepo,
     mockSelector
   );

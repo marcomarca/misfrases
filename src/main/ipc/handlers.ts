@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 import { IPC_CHANNELS } from '../../shared/constants';
 import {
   CreateContextBlockSchema,
@@ -11,14 +11,12 @@ import {
 } from '../../shared/schemas';
 import type { SnippetService } from '../snippets/SnippetService';
 import type { HotkeyService } from '../hotkeys/HotkeyService';
-import type { StatisticsService } from '../statistics/StatisticsService';
+import type { UsageRepository } from '../database/repositories/UsageRepository';
 import type { SettingsRepository } from '../database/repositories/SettingsRepository';
 import type { ContextBlockRepository } from '../database/repositories/ContextBlockRepository';
 import type { ExpansionService } from '../expansion/ExpansionService';
 import type { SelectorWindowService } from '../popup/SelectorWindowService';
 import type { TrayService } from '../tray/TrayService';
-import { LoginItemService } from '../lifecycle/LoginItemService';
-
 import type { BackupService } from '../backup/BackupService';
 import { AutoUpdateService } from '../lifecycle/AutoUpdateService';
 import type { BrowserWindow } from 'electron';
@@ -27,12 +25,13 @@ export interface IpcServices {
   snippetService: SnippetService;
   hotkeyService: HotkeyService;
   contextBlockRepo: ContextBlockRepository;
-  statsService: StatisticsService;
+  usageRepo: UsageRepository;
   settingsRepo: SettingsRepository;
   expansionService: ExpansionService;
   selectorService: SelectorWindowService;
   trayService: TrayService;
   backupService: BackupService;
+  applyLoginSettings: (settings: { launchAtLogin: boolean; startHidden?: boolean }) => void;
   getMainWindow?: () => BrowserWindow | null;
   onQuit: () => void;
 }
@@ -115,11 +114,11 @@ export function registerIpcHandlers(services: IpcServices): void {
 
   // Stats
   ipcMain.handle(IPC_CHANNELS.STATS_SUMMARY, async () => {
-    return services.statsService.getSummary();
+    return services.usageRepo.getSummary();
   });
 
   ipcMain.handle(IPC_CHANNELS.STATS_BY_SNIPPET, async () => {
-    return services.statsService.getStatsBySnippet();
+    return services.usageRepo.getStatsBySnippet();
   });
 
   // Settings
@@ -138,7 +137,7 @@ export function registerIpcHandlers(services: IpcServices): void {
     }
 
     if (validated.launchAtLogin !== undefined || validated.startHidden !== undefined) {
-      LoginItemService.apply(updated);
+      services.applyLoginSettings(updated);
     }
 
     return updated;
